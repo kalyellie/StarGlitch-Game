@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Star Glitch: XYRATH-9</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- Phantom SDK para Mini Apps -->
-  <script src="https://unpkg.com/@phantom/deep-link@1.0.2/dist/index.js"></script>
+  <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: none; }
@@ -29,7 +28,7 @@
 
     <div id="connectSection">
       <button class="btn" onclick="connectPhantom()">CONECTAR PHANTOM</button>
-      <button class="btn" onclick="connectMetaMask()">CONECTAR METAMASK</button>
+      <button class="btn" onclick="connectMetaMask()">METAMASK (World Chain)</button>
     </div>
 
     <div id="gameSection" class="hidden">
@@ -53,24 +52,39 @@
 
     let wallet, network, fragments = 0, streak = 0, interval;
 
-    // CONECTAR PHANTOM EN MINI APP
+    // CONECTAR PHANTOM (CON CLAVE + REDIRECT)
     async function connectPhantom() {
       try {
-        const phantom = new PhantomDeepLink();
-        const response = await phantom.connect({
-          app_url: window.location.origin,
-          redirect_link: window.location.href
-        });
+        // Generar clave para encriptación
+        const keypair = Solana.Keypair.generate();
+        const dappKey = keypair.publicKey.toBase58();
 
-        wallet = response.publicKey;
-        network = "Solana";
-        startGame();
+        // URL de regreso (mismo Mini App)
+        const redirect = encodeURIComponent(window.location.href);
+
+        // Deep link OFICIAL con clave
+        const phantomLink = `https://phantom.app/ul/v1/connect?app_url=${encodeURIComponent(window.location.origin)}&redirect_link=${redirect}&dapp_encryption_public_key=${dappKey}&cluster=mainnet-beta`;
+
+        // Abrir Phantom
+        window.location.href = phantomLink;
+
+        // Detectar regreso (Phantom añade ?phantom_encryption_public_key=...)
+        const checkReturn = setInterval(() => {
+          const params = new URLSearchParams(window.location.search);
+          if (params.get('phantom_encryption_public_key')) {
+            clearInterval(checkReturn);
+            // Simular wallet (en producción, desencriptar)
+            wallet = "5FHwk...xyz"; // Reemplazar con desencriptado real
+            network = "Solana";
+            startGame();
+          }
+        }, 500);
       } catch (err) {
-        document.getElementById("status").innerText = "Error: Abre Phantom App";
+        document.getElementById("status").innerText = "Error al conectar";
       }
     }
 
-    // CONECTAR METAMASK (World Chain)
+    // METAMASK (World Chain)
     async function connectMetaMask() {
       if (window.ethereum) {
         try {
@@ -78,8 +92,8 @@
           wallet = window.ethereum.selectedAddress;
           network = "World Chain";
           startGame();
-        } catch (err) {
-          document.getElementById("status").innerText = "MetaMask cancelado";
+        } catch {
+          document.getElementById("status").innerText = "Cancelado";
         }
       } else {
         document.getElementById("status").innerText = "Instala MetaMask";
