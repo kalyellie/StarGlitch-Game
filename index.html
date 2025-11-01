@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Star Glitch: XYRATH-9</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Phantom SDK para Mini Apps -->
+  <script src="https://unpkg.com/@phantom/deep-link@1.0.2/dist/index.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: none; }
@@ -25,8 +28,8 @@
     <p id="status">Conecta tu wallet</p>
 
     <div id="connectSection">
-      <button class="btn" onclick="connectPhantom()">PHANTOM (Solana)</button>
-      <button class="btn" onclick="connectMetaMask()">METAMASK (World Chain)</button>
+      <button class="btn" onclick="connectPhantom()">CONECTAR PHANTOM</button>
+      <button class="btn" onclick="connectMetaMask()">CONECTAR METAMASK</button>
     </div>
 
     <div id="gameSection" class="hidden">
@@ -45,52 +48,46 @@
   </div>
 
   <script>
+    Telegram.WebApp.ready();
+    Telegram.WebApp.expand();
+
     let wallet, network, fragments = 0, streak = 0, interval;
 
-    // CONECTAR PHANTOM
+    // CONECTAR PHANTOM EN MINI APP
     async function connectPhantom() {
-      // Verificar si Phantom está inyectado
-      if (typeof window.solana !== 'undefined' && window.solana.isPhantom) {
-        try {
-          const resp = await window.solana.connect();
-          wallet = resp.publicKey.toString();
-          network = "Solana";
-          startGame();
-        } catch (err) {
-          document.getElementById("status").innerText = "Conexión cancelada";
-        }
-      } else {
-        // Fallback: abrir Phantom App
-        const link = `https://phantom.app/ul/browse/${encodeURIComponent(window.location.href)}?ref=starglitch`;
-        window.open(link, '_blank');
-        document.getElementById("status").innerText = "Abriendo Phantom... Conecta y regresa";
+      try {
+        const phantom = new PhantomDeepLink();
+        const response = await phantom.connect({
+          app_url: window.location.origin,
+          redirect_link: window.location.href
+        });
+
+        wallet = response.publicKey;
+        network = "Solana";
+        startGame();
+      } catch (err) {
+        document.getElementById("status").innerText = "Error: Abre Phantom App";
       }
     }
 
-    // CONECTAR METAMASK
+    // CONECTAR METAMASK (World Chain)
     async function connectMetaMask() {
-      if (typeof window.ethereum !== 'undefined') {
+      if (window.ethereum) {
         try {
           await window.ethereum.request({ method: 'eth_requestAccounts' });
-          const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-          if (chainId === '0x1e0') { // World Chain
-            wallet = window.ethereum.selectedAddress;
-            network = "World Chain";
-            startGame();
-          } else {
-            document.getElementById("status").innerText = "Cambia a World Chain";
-          }
+          wallet = window.ethereum.selectedAddress;
+          network = "World Chain";
+          startGame();
         } catch (err) {
-          document.getElementById("status").innerText = "Conexión cancelada";
+          document.getElementById("status").innerText = "MetaMask cancelado";
         }
       } else {
-        window.open('https://metamask.app.link/dapp/' + window.location.host, '_blank');
-        document.getElementById("status").innerText = "Abriendo MetaMask...";
+        document.getElementById("status").innerText = "Instala MetaMask";
       }
     }
 
     function startGame() {
-      document.getElementById("status").innerText = `${network}: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
+      document.getElementById("status").innerText = `${network}: ${wallet.slice(0,6)}...`;
       document.getElementById("connectSection").classList.add("hidden");
       document.getElementById("gameSection").classList.remove("hidden");
       startHODL();
@@ -132,19 +129,12 @@
 
     function cashOut() {
       if (fragments < 100) return alert("100 fragmentos mínimo");
-      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG a ${wallet} en ${network}`);
+      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG a ${wallet}`);
     }
 
     const style = document.createElement('style');
     style.innerHTML = `@keyframes fall { from { top: -50px; } to { top: 100vh; } }`;
     document.head.appendChild(style);
-
-    // AUTO-CONECTAR SI YA ESTÁ CONECTADO
-    if (typeof window.solana !== 'undefined' && window.solana.isConnected) {
-      wallet = window.solana.publicKey.toString();
-      network = "Solana";
-      startGame();
-    }
   </script>
 </body>
 </html>
