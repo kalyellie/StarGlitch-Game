@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Star Glitch: XYRATH-9</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: none; }
@@ -16,7 +17,6 @@
     .hodl-area { width: 100vw; height: 50vh; background: rgba(0,255,0,0.1); display: flex; align-items: center; justify-content: center; font-size: 2em; margin: 20px 0; }
     .jackpot { color: #ff0; font-weight: bold; }
     .hidden { display: none; }
-    #status { margin: 15px; font-size: 1.1em; }
   </style>
 </head>
 <body>
@@ -26,7 +26,8 @@
     <p id="status">Pulsa para conectar</p>
 
     <div id="connectSection">
-      <button class="btn" id="phantomBtn">CONECTAR PHANTOM</button>
+      <button class="btn" onclick="connectPhantom()">CONECTAR PHANTOM (Solana)</button>
+      <button class="btn" onclick="connectMetaMask()">CONECTAR METAMASK (World Chain)</button>
     </div>
 
     <div id="gameSection" class="hidden">
@@ -45,25 +46,30 @@
   </div>
 
   <script>
-    const GAME_URL = "https://kalyellie.github.io/StarGlitch-Game/";
+    Telegram.WebApp.ready();
+    Telegram.WebApp.expand();
+
     let fragments = 0, streak = 0, interval;
 
-    // Detectar si volvió conectado
+    function connectPhantom() {
+      const callback = encodeURIComponent(window.location.href + "?solana_connected=true");
+      window.location.href = `https://phantom.app/ul/v1/connect?app_url=${encodeURIComponent(window.location.origin)}&redirect_link=${callback}&cluster=mainnet-beta`;
+    }
+
+    function connectMetaMask() {
+      const callback = encodeURIComponent(window.location.href + "?world_connected=true");
+      window.location.href = `https://metamask.app.link/dapp/${window.location.host}?redirect_link=${callback}`;
+    }
+
+    // Detectar regreso de wallet
     const urlParams = new URLSearchParams(window.location.search);
-    const phantomKey = urlParams.get('phantom');
-    if (phantomKey) {
-      document.getElementById("status").innerText = `Phantom: ${phantomKey.slice(0,6)}...${phantomKey.slice(-4)}`;
+    if (urlParams.get('solana_connected') || urlParams.get('world_connected')) {
+      document.getElementById("status").innerText = "Wallet conectada!";
       document.getElementById("connectSection").classList.add("hidden");
       document.getElementById("gameSection").classList.remove("hidden");
       startHODL();
+      Telegram.WebApp.close(); // Cierra navegador y regresa a Telegram
     }
-
-    // Botón Phantom
-    document.getElementById("phantomBtn").addEventListener("click", () => {
-      const callback = encodeURIComponent(GAME_URL + "?phantom=" + Date.now());
-      const phantomLink = `https://phantom.app/ul/v1/connect?app_url=${encodeURIComponent(GAME_URL)}&redirect_link=${callback}&cluster=mainnet-beta`;
-      window.location.href = phantomLink;
-    });
 
     function startHODL() {
       const area = document.getElementById("hodlArea");
