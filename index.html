@@ -9,7 +9,7 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: none; }
     .tentacle { font-size: 5em; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform closeness: scale(1.3); } }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
     .container { padding: 20px; }
     h1 { font-size: 1.8em; margin: 10px 0; }
     .stats { margin: 15px 0; font-size: 1.2em; }
@@ -23,11 +23,11 @@
   <div class="container">
     <div class="tentacle">🦑</div>
     <h1>STAR GLITCH: XYRATH-9</h1>
-    <p id="status">Bienvenido, <span id="user">HODLer</span></p>
+    <p id="status">Conecta tu wallet</p>
 
     <div id="connectSection">
-      <button class="btn" onclick="connectSolana()">Conectar Solana (Phantom)</button>
-      <button class="btn" onclick="connectWorld()">Conectar World Chain</button>
+      <button class="btn" onclick="openPhantom()">ABRIR PHANTOM (Solana)</button>
+      <button class="btn" onclick="openMetaMask()">ABRIR METAMASK (World Chain)</button>
     </div>
 
     <div id="gameSection" class="hidden">
@@ -46,30 +46,31 @@
   </div>
 
   <script>
-    // Telegram Web App Init
     Telegram.WebApp.ready();
-    const user = Telegram.WebApp.initDataUnsafe.user;
-    document.getElementById("user").innerText = user ? user.first_name : "HODLer";
+    Telegram.WebApp.expand(); // Forzar pantalla completa
 
-    let fragments = 0, streak = 0, interval;
-
-    function connectSolana() {
-      const deepLink = "https://phantom.app/ul/browse/" + encodeURIComponent(window.location.href) + "?ref=starglitch";
-      window.location.href = deepLink;
+    function openPhantom() {
+      const url = window.location.href;
+      const phantomLink = `phantom://browse?uri=${encodeURIComponent(url)}`;
+      window.location.href = phantomLink;
     }
 
-    function connectWorld() {
-      const deepLink = "https://metamask.app.link/dapp/" + window.location.host;
-      window.location.href = deepLink;
+    function openMetaMask() {
+      const url = window.location.href;
+      const mmLink = `https://metamask.app.link/dapp/${url.split('/').slice(2).join('/')}`;
+      window.location.href = mmLink;
     }
 
-    // Detecta si wallet está conectada (simulado para prueba)
-    if (window.location.search.includes("connected")) {
-      document.getElementById("status").innerText = "Wallet conectada";
+    // Detectar si vuelve conectado (simulado)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('phantom_connected')) {
+      document.getElementById("status").innerText = "Phantom conectado";
       document.getElementById("connectSection").classList.add("hidden");
       document.getElementById("gameSection").classList.remove("hidden");
       startHODL();
     }
+
+    let fragments = 0, streak = 0, interval;
 
     function startHODL() {
       const area = document.getElementById("hodlArea");
