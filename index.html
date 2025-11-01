@@ -4,8 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Star Glitch: XYRATH-9</title>
-  <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
-  <script src="https://unpkg.com/@solana/wallet-adapter-base@0.9.23/dist/umd/index.js"></script>
+  <!-- MetaMask SDK para Telegram -->
+  <script src="https://unpkg.com/metamask-sdk@0.18.0/dist/metamask-sdk.js"></script>
+  <!-- Phantom SDK para Solana -->
+  <script src="https://unpkg.com/@solana/wallet-adapter-phantom@0.9.23/dist/umd/index.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: none; }
@@ -18,7 +20,7 @@
     .hodl-area { width: 100vw; height: 50vh; background: rgba(0,255,0,0.1); display: flex; align-items: center; justify-content: center; font-size: 2em; margin: 20px 0; }
     .jackpot { color: #ff0; font-weight: bold; }
     .hidden { display: none; }
-    #qrCode { width: 200px; height: 200px; margin: 20px auto; }
+    #status { font-size: 1.1em; margin: 10px; }
   </style>
 </head>
 <body>
@@ -29,7 +31,7 @@
 
     <div id="connectSection">
       <button class="btn" onclick="connectWallet()">Conectar Wallet</button>
-      <div id="qrCode"></div>
+      <p id="loading" class="hidden">Conectando... Abre tu app de wallet</p>
     </div>
 
     <div id="gameSection" class="hidden">
@@ -50,23 +52,48 @@
   <script>
     const SOLANA_CA = "8o3ziaJUWVNhcryJ1q2nnFR21D7Zx3PHzjiPH8J4azUm";
     const WORLD_CA = "0xa3Ad51ebd02690317b34f83329F082F9b4f84683";
-    let wallet, fragments = 0, streak = 0, interval;
+    let wallet, network, fragments = 0, streak = 0, interval;
 
     async function connectWallet() {
-      document.getElementById("status").innerText = "Escanea QR con Phantom o World App";
-      
-      // WalletConnect QR
-      const provider = new WalletConnectProvider({
-        rpc: {
-          480: "https://worldchain-mainnet.g.alchemy.com/public", // World Chain
-          101: "https://api.mainnet-beta.solana.com" // Solana
-        },
-        qrcode: true
-      });
+      document.getElementById("status").innerText = "Detectando wallet...";
+      document.getElementById("loading").classList.remove("hidden");
 
-      await provider.enable();
-      wallet = provider.accounts[0];
-      document.getElementById("status").innerText = `Conectado: ${wallet.slice(0,6)}...`;
+      // MetaMask SDK para World Chain (EVM)
+      const metamaskSDK = new MetaMaskSDK({
+        dappMetadata: { name: "Star Glitch: XYRATH-9" },
+        defaultChain: "eip155:480" // World Chain ID 480
+      });
+      const metamaskProvider = metamaskSDK.getProvider();
+
+      // Phantom para Solana
+      if (typeof window.solana !== 'undefined') {
+        try {
+          await window.solana.connect();
+          wallet = window.solana.publicKey.toString();
+          network = "Solana";
+          document.getElementById("status").innerText = `Solana: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
+        } catch (e) {
+          document.getElementById("status").innerText = "Phantom cancelado";
+          return;
+        }
+      } 
+      // MetaMask para World Chain
+      else if (metamaskProvider) {
+        try {
+          await metamaskProvider.request({ method: 'eth_requestAccounts' });
+          wallet = metamaskProvider.selectedAddress;
+          network = "World Chain";
+          document.getElementById("status").innerText = `World Chain: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
+        } catch (e) {
+          document.getElementById("status").innerText = "MetaMask cancelado";
+          return;
+        }
+      } else {
+        document.getElementById("status").innerText = "Instala Phantom o MetaMask y recarga";
+        return;
+      }
+
+      document.getElementById("loading").classList.add("hidden");
       document.getElementById("connectSection").classList.add("hidden");
       document.getElementById("gameSection").classList.remove("hidden");
       startHODL();
@@ -115,8 +142,8 @@
     async function cashOut() {
       if (fragments < 100) return alert("Necesitas 100 fragmentos");
       const amount = (fragments / 1000).toFixed(3);
-      alert(`Cobras ${amount} $STARG! Enviando a ${wallet}`);
-      // Aquí integra Solana Pay o World Chain transfer real
+      alert(`Cobras ${amount} $STARG! Enviando a ${wallet} en ${network}`);
+      // Aquí integra transferencia real (próximo paso)
     }
 
     const style = document.createElement('style');
