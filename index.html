@@ -53,29 +53,39 @@
     let fragments = 0, streak = 0, interval, wallet;
 
     function connectPhantom() {
+      // Generar clave para encriptación
       const keypair = Solana.Keypair.generate();
-      const publicKey = keypair.publicKey.toBase58();
-      const appUrl = encodeURIComponent(window.location.origin);
-      const redirect = encodeURIComponent(window.location.href + "?solana_connected=true&pk=" + publicKey);
+      const dappKey = keypair.publicKey.toBase58();
+      const session = Date.now().toString();
 
-      const phantomLink = `https://phantom.app/ul/v1/connect?app_url=${appUrl}&dapp_encryption_public_key=${publicKey}&redirect_link=${redirect}&cluster=mainnet-beta`;
+      // Deep link OFICIAL 2025
+      const params = new URLSearchParams({
+        app_url: window.location.origin,
+        redirect_link: window.location.href + "?connected=true",
+        cluster: 'mainnet-beta',
+        dapp_encryption_public_key: dappKey,
+        session: session
+      });
+
+      const phantomLink = `https://phantom.app/ul/v1/connect?${params.toString()}`;
       window.location.href = phantomLink;
     }
 
     function connectMetaMask() {
       const redirect = encodeURIComponent(window.location.href + "?world_connected=true");
-      window.location.href = `https://metamask.app.link/dapp/${window.location.host}?redirect_link=${redirect}`;
+      window.location.href = `https://metamask.app.link/dapp/${window.location.host}?redirect=${redirect}`;
     }
 
-    // Detectar regreso y conectar
+    // Detectar regreso
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('solana_connected') || urlParams.get('world_connected')) {
-      wallet = urlParams.get('pk') || "Connected";
-      document.getElementById("status").innerText = "Wallet conectada!";
+    if (urlParams.get('connected') || urlParams.get('world_connected')) {
+      wallet = "Conectada";
+      document.getElementById("status").innerText = "¡Wallet conectada!";
       document.getElementById("connectSection").classList.add("hidden");
       document.getElementById("gameSection").classList.remove("hidden");
       startHODL();
-      Telegram.WebApp.close(); // Regresa a Telegram
+      // Forzar regreso a Telegram
+      setTimeout(() => Telegram.WebApp.close(), 1000);
     }
 
     function startHODL() {
