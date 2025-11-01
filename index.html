@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Star Glitch: XYRATH-9</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: none; }
@@ -50,42 +49,37 @@
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
 
-    let fragments = 0, streak = 0, interval, wallet;
+    let fragments = 0, streak = 0, interval;
 
     function connectPhantom() {
-      // Generar clave para encriptación
-      const keypair = Solana.Keypair.generate();
-      const dappKey = keypair.publicKey.toBase58();
-      const session = Date.now().toString();
+      // Protocolo phantom:// para abrir la app
+      const phantomAppLink = "phantom://";
+      const fallbackLink = "https://phantom.app/ul/browse/" + encodeURIComponent(window.location.href);
 
-      // Deep link OFICIAL 2025
-      const params = new URLSearchParams({
-        app_url: window.location.origin,
-        redirect_link: window.location.href + "?connected=true",
-        cluster: 'mainnet-beta',
-        dapp_encryption_public_key: dappKey,
-        session: session
-      });
+      // Intentar abrir app
+      window.location.href = phantomAppLink;
 
-      const phantomLink = `https://phantom.app/ul/v1/connect?${params.toString()}`;
-      window.location.href = phantomLink;
+      // Fallback a web si no abre en 1s
+      setTimeout(() => {
+        window.location.href = fallbackLink;
+      }, 1000);
     }
 
     function connectMetaMask() {
-      const redirect = encodeURIComponent(window.location.href + "?world_connected=true");
-      window.location.href = `https://metamask.app.link/dapp/${window.location.host}?redirect=${redirect}`;
+      const mmLink = "metamask://";
+      const fallback = "https://metamask.app.link/dapp/" + window.location.host;
+      window.location.href = mmLink;
+      setTimeout(() => window.location.href = fallback, 1000);
     }
 
-    // Detectar regreso
+    // Detectar regreso (simulado)
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('connected') || urlParams.get('world_connected')) {
-      wallet = "Conectada";
+    if (urlParams.get('connected')) {
       document.getElementById("status").innerText = "¡Wallet conectada!";
       document.getElementById("connectSection").classList.add("hidden");
       document.getElementById("gameSection").classList.remove("hidden");
       startHODL();
-      // Forzar regreso a Telegram
-      setTimeout(() => Telegram.WebApp.close(), 1000);
+      setTimeout(() => Telegram.WebApp.close(), 1500);
     }
 
     function startHODL() {
@@ -124,7 +118,7 @@
 
     function cashOut() {
       if (fragments < 100) return alert("100 fragmentos mínimo");
-      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG a ${wallet}`);
+      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG`);
     }
 
     const style = document.createElement('style');
