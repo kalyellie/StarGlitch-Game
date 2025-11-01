@@ -5,10 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Star Glitch: XYRATH-9</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://unpkg.com/@solana/wallet-adapter-base@0.9.23/dist/umd/index.min.js"></script>
-  <script src="https://unpkg.com/@solana/wallet-adapter-phantom@0.9.23/dist/umd/index.min.js"></script>
-  <script src="https://unpkg.com/@solana/wallet-adapter-wallets@0.19.32/dist/umd/index.min.js"></script>
-  <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: none; }
@@ -27,10 +23,11 @@
   <div class="container">
     <div class="tentacle">🦑</div>
     <h1>STAR GLITCH: XYRATH-9</h1>
-    <p id="status">Conectando...</p>
+    <p id="status">Elige tu wallet</p>
 
     <div id="connectSection">
-      <button class="btn" id="connectBtn">CONECTAR PHANTOM</button>
+      <button class="btn" onclick="connectPhantom()">PHANTOM (Solana)</button>
+      <button class="btn" onclick="connectWorld()">METAMASK (World Chain)</button>
     </div>
 
     <div id="gameSection" class="hidden">
@@ -52,26 +49,51 @@
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
 
-    let wallet, connection, fragments = 0, streak = 0, interval;
+    let wallet, network, fragments = 0, streak = 0, interval;
 
-    // Inicializar Wallet Adapter
-    const wallets = [new PhantomWalletAdapter()];
-    const walletAdapter = new WalletAdapter(wallets);
-
-    document.getElementById("connectBtn").addEventListener("click", async () => {
-      try {
-        await walletAdapter.connect();
-        wallet = walletAdapter.publicKey.toString();
-        connection = new Solana.Connection("https://api.mainnet-beta.solana.com");
-
-        document.getElementById("status").innerText = `Conectado: ${wallet.slice(0,6)}...`;
-        document.getElementById("connectSection").classList.add("hidden");
-        document.getElementById("gameSection").classList.remove("hidden");
-        startHODL();
-      } catch (err) {
-        document.getElementById("status").innerText = "Error: Phantom no detectado";
+    // CONECTAR PHANTOM (Solana)
+    async function connectPhantom() {
+      if (window.solana && window.solana.isPhantom) {
+        try {
+          await window.solana.connect();
+          wallet = window.solana.publicKey.toString();
+          network = "Solana";
+          startGame();
+        } catch (err) {
+          document.getElementById("status").innerText = "Phantom cancelado";
+        }
+      } else {
+        document.getElementById("status").innerText = "Phantom no detectado. Instala la app.";
       }
-    });
+    }
+
+    // CONECTAR METAMASK (World Chain)
+    async function connectWorld() {
+      if (window.ethereum) {
+        try {
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+          if (chainId === '0x1e0') { // World Chain = 480
+            wallet = window.ethereum.selectedAddress;
+            network = "World Chain";
+            startGame();
+          } else {
+            document.getElementById("status").innerText = "Cambia a World Chain en MetaMask";
+          }
+        } catch (err) {
+          document.getElementById("status").innerText = "MetaMask cancelado";
+        }
+      } else {
+        document.getElementById("status").innerText = "MetaMask no detectado. Instala la app.";
+      }
+    }
+
+    function startGame() {
+      document.getElementById("status").innerText = `${network}: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
+      document.getElementById("connectSection").classList.add("hidden");
+      document.getElementById("gameSection").classList.remove("hidden");
+      startHODL();
+    }
 
     function startHODL() {
       const area = document.getElementById("hodlArea");
@@ -109,7 +131,7 @@
 
     function cashOut() {
       if (fragments < 100) return alert("100 fragmentos mínimo");
-      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG a ${wallet}`);
+      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG a ${wallet} en ${network}`);
     }
 
     const style = document.createElement('style');
