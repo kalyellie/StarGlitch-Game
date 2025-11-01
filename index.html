@@ -1,18 +1,139 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Star Glitch: XYRATH-9</title>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/pay@0.2.2/dist/index.iife.min.js"></script>
   <style>
-    body { background: #000; color: #0f0; font-family: monospace; text-align: center; padding: 50px; }
-    h1 { font-size: 2em; }
-    .tentacle { font-size: 3em; animation: pulse 2s infinite; }
-    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      text-align: center;
+      overflow: hidden;
+      touch-action: none;
+    }
+    .tentacle { font-size: 5em; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+    .container { padding: 20px; }
+    h1 { font-size: 1.8em; margin: 10px 0; }
+    .stats { margin: 15px 0; font-size: 1.2em; }
+    .btn {
+      background: #0f0; color: #000; border: none; padding: 15px 30px;
+      font-size: 1.3em; margin: 10px; border-radius: 10px; cursor: pointer;
+    }
+    .hodl-area {
+      width: 100vw; height: 50vh; background: rgba(0,255,0,0.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2em; margin: 20px 0;
+    }
+    .jackpot { color: #ff0; font-weight: bold; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
-  <div class="tentacle">🦑</div>
-  <h1>STAR GLITCH: XYRATH-9</h1>
-  <p>Juego en desarrollo... ¡HODL Xyrath-9!</p>
-  <p>CA: 0xa3Ad51ebd02690317b34f83329F082F9b4f84683</p>
+  <div class="container">
+    <div class="tentacle">🦑</div>
+    <h1>STAR GLITCH: XYRATH-9</h1>
+    <p id="status">Conecta tu wallet para jugar</p>
+
+    <div id="connectSection">
+      <button class="btn" onclick="connectWallet()">Conectar Wallet</button>
+    </div>
+
+    <div id="gameSection" class="hidden">
+      <div class="stats">
+        💰 Fragmentos: <span id="fragments">0</span><br>
+        ⏱️ HODL Streak: <span id="streak">0</span>s<br>
+        🏆 Jackpot: <span class="jackpot">100 $STARG</span>
+      </div>
+
+      <div class="hodl-area" id="hodlArea">
+        <div id="hodlText">¡HODLEA AQUÍ!</div>
+      </div>
+
+      <button class="btn" onclick="cashOut()">COBRAR $STARG</button>
+    </div>
+  </div>
+
+  <script>
+    const WORLD_CHAIN_CA = "0xa3Ad51ebd02690317b34f83329F082F9b4f84683";
+    const SOLANA_CA = "8o3ziaJUWVNhcryJ1q2nnFR21D7Zx3PHzjiPH8J4azUm";
+    let provider, wallet, fragments = 0, streak = 0, interval;
+
+    async function connectWallet() {
+      if (window.solana && window.solana.isPhantom) {
+        provider = window.solana;
+      } else if (window.ethereum) {
+        provider = window.ethereum;
+      } else {
+        alert("Instala Phantom o MetaMask");
+        return;
+      }
+
+      try {
+        await provider.request({ method: 'eth_requestAccounts' });
+        wallet = provider.selectedAddress || provider.accounts[0];
+        document.getElementById("status").innerText = `Wallet: ${wallet.slice(0,6)}...`;
+        document.getElementById("connectSection").classList.add("hidden");
+        document.getElementById("gameSection").classList.remove("hidden");
+        startHODL();
+      } catch (e) { alert("Error conectando"); }
+    }
+
+    function startHODL() {
+      const area = document.getElementById("hodlArea");
+      area.addEventListener("touchstart", startStreak);
+      area.addEventListener("mousedown", startStreak);
+      area.addEventListener("touchend", endStreak);
+      area.addEventListener("mouseup", endStreak);
+    }
+
+    function startStreak() {
+      streak = 0;
+      document.getElementById("hodlText").innerText = "¡HODLEANDO!";
+      interval = setInterval(() => {
+        streak++;
+        fragments += streak;
+        document.getElementById("streak").innerText = streak;
+        document.getElementById("fragments").innerText = fragments;
+        if (streak % 10 === 0) addTentacleAttack();
+      }, 1000);
+    }
+
+    function endStreak() {
+      clearInterval(interval);
+      document.getElementById("hodlText").innerText = "¡HODLEA AQUÍ!";
+      if (streak > 5) {
+        alert(`¡HODLeaste ${streak}s! Ganaste ${(streak/10).toFixed(1)} $STARG`);
+      }
+    }
+
+    function addTentacleAttack() {
+      const tentacle = document.createElement("div");
+      tentacle.innerText = "🦑";
+      tentacle.style.position = "absolute";
+      tentacle.style.fontSize = "3em";
+      tentacle.style.left = Math.random() * 80 + "%";
+      tentacle.style.top = "-50px";
+      tentacle.style.animation = "fall 3s linear";
+      document.body.appendChild(tentacle);
+      setTimeout(() => tentacle.remove(), 3000);
+    }
+
+    async function cashOut() {
+      if (fragments < 100) return alert("Necesitas 100 fragmentos");
+      const amount = (fragments / 1000).toFixed(3);
+      alert(`Cobras ${amount} $STARG! Enviando...`);
+      // Aquí iría Solana Pay o World Chain transfer
+    }
+
+    // Animación de tentáculos cayendo
+    const style = document.createElement('style');
+    style.innerHTML = `@keyframes fall { from { top: -50px; } to { top: 100vh; } }`;
+    document.head.appendChild(style);
+  </script>
 </body>
 </html>
