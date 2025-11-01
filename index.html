@@ -52,56 +52,58 @@
 
     let wallet, network, fragments = 0, streak = 0, interval;
 
-    // CONECTAR PHANTOM (CON CLAVE + REDIRECT)
-    async function connectPhantom() {
+    // CONECTAR PHANTOM CON openLink
+    function connectPhantom() {
       try {
-        // Generar clave para encriptación
         const keypair = Solana.Keypair.generate();
         const dappKey = keypair.publicKey.toBase58();
-
-        // URL de regreso (mismo Mini App)
+        const session = Date.now().toString();
         const redirect = encodeURIComponent(window.location.href);
 
-        // Deep link OFICIAL con clave
-        const phantomLink = `https://phantom.app/ul/v1/connect?app_url=${encodeURIComponent(window.location.origin)}&redirect_link=${redirect}&dapp_encryption_public_key=${dappKey}&cluster=mainnet-beta`;
+        const params = new URLSearchParams({
+          app_url: window.location.origin,
+          redirect_link: redirect,
+          dapp_encryption_public_key: dappKey,
+          cluster: 'mainnet-beta',
+          session: session
+        });
 
-        // Abrir Phantom
-        window.location.href = phantomLink;
+        const phantomLink = `https://phantom.app/ul/v1/connect?${params.toString()}`;
 
-        // Detectar regreso (Phantom añade ?phantom_encryption_public_key=...)
-        const checkReturn = setInterval(() => {
-          const params = new URLSearchParams(window.location.search);
-          if (params.get('phantom_encryption_public_key')) {
-            clearInterval(checkReturn);
-            // Simular wallet (en producción, desencriptar)
-            wallet = "5FHwk...xyz"; // Reemplazar con desencriptado real
-            network = "Solana";
-            startGame();
-          }
-        }, 500);
+        // USA openLink PARA QUE TELEGRAM LO PERMITA
+        Telegram.WebApp.openLink(phantomLink);
       } catch (err) {
-        document.getElementById("status").innerText = "Error al conectar";
+        document.getElementById("status").innerText = "Error al abrir Phantom";
       }
     }
 
-    // METAMASK (World Chain)
-    async function connectMetaMask() {
-      if (window.ethereum) {
-        try {
-          await window.ethereum.request({ method: 'eth_requestAccounts' });
-          wallet = window.ethereum.selectedAddress;
-          network = "World Chain";
-          startGame();
-        } catch {
-          document.getElementById("status").innerText = "Cancelado";
-        }
-      } else {
-        document.getElementById("status").innerText = "Instala MetaMask";
-      }
+    // METAMASK
+    function connectMetaMask() {
+      Telegram.WebApp.openLink('https://metamask.app.link/dapp/' + window.location.host);
     }
+
+    // DETECTAR REGRESO DE PHANTOM
+    window.addEventListener('load', () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('phantom_encryption_public_key')) {
+        wallet = "Conectada (Solana)";
+        network = "Solana";
+        startGame();
+      }
+    });
+
+    // POLLING PARA REGRESO
+    setInterval(() => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('phantom_encryption_public_key') && !wallet) {
+        wallet = "Conectada (Solana)";
+        network = "Solana";
+        startGame();
+      }
+    }, 1000);
 
     function startGame() {
-      document.getElementById("status").innerText = `${network}: ${wallet.slice(0,6)}...`;
+      document.getElementById("status").innerText = `${network}: ${wallet}`;
       document.getElementById("connectSection").classList.add("hidden");
       document.getElementById("gameSection").classList.remove("hidden");
       startHODL();
@@ -143,7 +145,7 @@
 
     function cashOut() {
       if (fragments < 100) return alert("100 fragmentos mínimo");
-      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG a ${wallet}`);
+      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG`);
     }
 
     const style = document.createElement('style');
