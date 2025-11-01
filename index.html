@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Star Glitch: XYRATH-9</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://unpkg.com/@solana/wallet-adapter-base@0.9.23/dist/umd/index.min.js"></script>
+  <script src="https://unpkg.com/@solana/wallet-adapter-phantom@0.9.23/dist/umd/index.min.js"></script>
+  <script src="https://unpkg.com/@solana/wallet-adapter-wallets@0.19.32/dist/umd/index.min.js"></script>
+  <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: none; }
@@ -23,11 +27,10 @@
   <div class="container">
     <div class="tentacle">🦑</div>
     <h1>STAR GLITCH: XYRATH-9</h1>
-    <p id="status">Pulsa para conectar</p>
+    <p id="status">Conectando...</p>
 
     <div id="connectSection">
-      <button class="btn" onclick="connectPhantom()">CONECTAR PHANTOM (Solana)</button>
-      <button class="btn" onclick="connectMetaMask()">CONECTAR METAMASK (World Chain)</button>
+      <button class="btn" id="connectBtn">CONECTAR PHANTOM</button>
     </div>
 
     <div id="gameSection" class="hidden">
@@ -49,38 +52,26 @@
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
 
-    let fragments = 0, streak = 0, interval;
+    let wallet, connection, fragments = 0, streak = 0, interval;
 
-    function connectPhantom() {
-      // Protocolo phantom:// para abrir la app
-      const phantomAppLink = "phantom://";
-      const fallbackLink = "https://phantom.app/ul/browse/" + encodeURIComponent(window.location.href);
+    // Inicializar Wallet Adapter
+    const wallets = [new PhantomWalletAdapter()];
+    const walletAdapter = new WalletAdapter(wallets);
 
-      // Intentar abrir app
-      window.location.href = phantomAppLink;
+    document.getElementById("connectBtn").addEventListener("click", async () => {
+      try {
+        await walletAdapter.connect();
+        wallet = walletAdapter.publicKey.toString();
+        connection = new Solana.Connection("https://api.mainnet-beta.solana.com");
 
-      // Fallback a web si no abre en 1s
-      setTimeout(() => {
-        window.location.href = fallbackLink;
-      }, 1000);
-    }
-
-    function connectMetaMask() {
-      const mmLink = "metamask://";
-      const fallback = "https://metamask.app.link/dapp/" + window.location.host;
-      window.location.href = mmLink;
-      setTimeout(() => window.location.href = fallback, 1000);
-    }
-
-    // Detectar regreso (simulado)
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('connected')) {
-      document.getElementById("status").innerText = "¡Wallet conectada!";
-      document.getElementById("connectSection").classList.add("hidden");
-      document.getElementById("gameSection").classList.remove("hidden");
-      startHODL();
-      setTimeout(() => Telegram.WebApp.close(), 1500);
-    }
+        document.getElementById("status").innerText = `Conectado: ${wallet.slice(0,6)}...`;
+        document.getElementById("connectSection").classList.add("hidden");
+        document.getElementById("gameSection").classList.remove("hidden");
+        startHODL();
+      } catch (err) {
+        document.getElementById("status").innerText = "Error: Phantom no detectado";
+      }
+    });
 
     function startHODL() {
       const area = document.getElementById("hodlArea");
@@ -118,7 +109,7 @@
 
     function cashOut() {
       if (fragments < 100) return alert("100 fragmentos mínimo");
-      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG`);
+      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG a ${wallet}`);
     }
 
     const style = document.createElement('style');
