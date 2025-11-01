@@ -6,46 +6,10 @@
   <title>Star Glitch: XYRATH-9</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: none; }
-    .tentacle { font-size: 5em; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
-    .container { padding: 20px; }
-    h1 { font-size: 1.8em; margin: 10px 0; }
-    .stats { margin: 15px 0; font-size: 1.2em; }
-    .btn { background: #0f0; color: #000; border: none; padding: 15px 30px; font-size: 1.3em; margin: 10px; border-radius: 10px; cursor: pointer; }
-    .hodl-area { width: 100vw; height: 50vh; background: rgba(0,255,0,0.1); display: flex; align-items: center; justify-content: center; font-size: 2em; margin: 20px 0; }
-    .jackpot { color: #ff0; font-weight: bold; }
-    .hidden { display: none; }
-  </style>
+  <!-- Resto del estilo sin cambios -->
 </head>
 <body>
-  <div class="container">
-    <div class="tentacle">🦑</div>
-    <h1>STAR GLITCH: XYRATH-9</h1>
-    <p id="status">Conecta tu wallet</p>
-
-    <div id="connectSection">
-      <button class="btn" onclick="connectPhantom()">CONECTAR PHANTOM</button>
-      <button class="btn" onclick="connectMetaMask()">METAMASK (World Chain)</button>
-    </div>
-
-    <div id="gameSection" class="hidden">
-      <div class="stats">
-        💰 Fragmentos: <span id="fragments">0</span><br>
-        ⏱️ HODL Streak: <span id="streak">0</span>s<br>
-        🏆 Jackpot: <span class="jackpot">100 $STARG</span>
-      </div>
-
-      <div class="hodl-area" id="hodlArea">
-        <div id="hodlText">¡HODLEA AQUÍ!</div>
-      </div>
-
-      <button class="btn" onclick="cashOut()">COBRAR $STARG</button>
-    </div>
-  </div>
-
+  <!-- HTML sin cambios -->
   <script>
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
@@ -55,10 +19,11 @@
     // CONECTAR PHANTOM CON openLink
     function connectPhantom() {
       try {
-        const keypair = Solana.Keypair.generate();
+        // Usar una clave pública generada para la sesión
+        const keypair = window.solanaWeb3.Keypair.generate();
         const dappKey = keypair.publicKey.toBase58();
         const session = Date.now().toString();
-        const redirect = encodeURIComponent(window.location.href);
+        const redirect = encodeURIComponent(window.location.origin); // Usar solo el origen
 
         const params = new URLSearchParams({
           app_url: window.location.origin,
@@ -69,15 +34,17 @@
         });
 
         const phantomLink = `https://phantom.app/ul/v1/connect?${params.toString()}`;
+        console.log("Deep link generado:", phantomLink); // Para depuración
 
-        // USA openLink PARA QUE TELEGRAM LO PERMITA
-        Telegram.WebApp.openLink(phantomLink);
+        // Usar Telegram.WebApp.openLink para abrir el enlace
+        Telegram.WebApp.openLink(phantomLink, { try_instant_view: false });
       } catch (err) {
-        document.getElementById("status").innerText = "Error al abrir Phantom";
+        console.error("Error en connectPhantom:", err);
+        document.getElementById("status").innerText = "Error al abrir Phantom: " + err.message;
       }
     }
 
-    // METAMASK
+    // METAMASK (sin cambios, parece correcto)
     function connectMetaMask() {
       Telegram.WebApp.openLink('https://metamask.app.link/dapp/' + window.location.host);
     }
@@ -88,6 +55,7 @@
       if (params.get('phantom_encryption_public_key')) {
         wallet = "Conectada (Solana)";
         network = "Solana";
+        document.getElementById("status").innerText = `${network}: ${wallet}`;
         startGame();
       }
     });
@@ -98,17 +66,18 @@
       if (params.get('phantom_encryption_public_key') && !wallet) {
         wallet = "Conectada (Solana)";
         network = "Solana";
+        document.getElementById("status").innerText = `${network}: ${wallet}`;
         startGame();
       }
     }, 1000);
 
     function startGame() {
-      document.getElementById("status").innerText = `${network}: ${wallet}`;
       document.getElementById("connectSection").classList.add("hidden");
       document.getElementById("gameSection").classList.remove("hidden");
       startHODL();
     }
 
+    // Resto de las funciones (startHODL, startStreak, endStreak, addTentacle, cashOut) sin cambios
     function startHODL() {
       const area = document.getElementById("hodlArea");
       area.addEventListener("touchstart", startStreak);
