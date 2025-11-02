@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Star Glitch: XYRATH-9</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
+  <script src="https://unpkg.com/web3@1.10.4/dist/web3.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: none; }
@@ -26,8 +28,12 @@
     <p id="status">Conecta tu wallet</p>
 
     <div id="connectSection">
-      <button class="btn" onclick="connectPhantom()">CONECTAR PHANTOM</button>
+      <button class="btn" onclick="connectPhantom()">PHANTOM (Solana)</button>
       <button class="btn" onclick="connectMetaMask()">METAMASK (World Chain)</button>
+    </div>
+
+    <div id="paymentSection" class="hidden">
+      <button class="btn" onclick="payToPlay()">PAGAR 0.1 $STARG PARA JUGAR</button>
     </div>
 
     <div id="gameSection" class="hidden">
@@ -49,56 +55,98 @@
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
 
-    let wallet = null, network = null, fragments = 0, streak = 0, interval;
+    const SOLANA_CA = "8o3ziaJUWVNhcryJ1q2nnFR21D7Zx3PHzjiPH8J4azUm";
+    const WORLD_CA = "0xa3Ad51ebd02690317b34f83329F082F9b4f84683";
+    const DEV_WALLET = "TU_WALLET_DEV_AQUÍ"; // Pega tu wallet para recibir pagos
 
-    // CONECTAR PHANTOM CON phantom://
-    function connectPhantom() {
-      const phantomApp = "phantom://connect";
-      const fallback = "https://phantom.app/ul/browse/" + encodeURIComponent(window.location.href);
+    let wallet, network, fragments = 0, streak = 0, interval, connection;
 
-      // Intentar abrir app
-      Telegram.WebApp.openLink(phantomApp);
-
-      // Fallback si no abre en 1.5s
-      setTimeout(() => {
-        Telegram.WebApp.openLink(fallback);
-      }, 1500);
-
-      document.getElementById("status").innerText = "Abriendo Phantom...";
-    }
-
-    // METAMASK
-    function connectMetaMask() {
-      Telegram.WebApp.openLink('metamask://');
-      setTimeout(() => {
-        Telegram.WebApp.openLink('https://metamask.app.link/dapp/' + window.location.host);
-      }, 1500);
-    }
-
-    // POLLING PARA DETECTAR REGRESO
-    setInterval(() => {
-      if (Telegram.WebApp.initDataUnsafe.user && !wallet) {
-        // Simular conexión (en producción: usar localStorage o backend)
-        if (localStorage.getItem('phantom_connected')) {
-          wallet = localStorage.getItem('phantom_wallet') || "Conectada";
+    // CONECTAR PHANTOM (Solana)
+    async function connectPhantom() {
+      if (window.solana && window.solana.isPhantom) {
+        try {
+          await window.solana.connect();
+          wallet = window.solana.publicKey.toString();
           network = "Solana";
+          connection = new Solana.Connection("https://api.mainnet-beta.solana.com");
+          showPayment();
+        } catch (err) {
+          document.getElementById("status").innerText = "Conexión cancelada";
+        }
+      } else {
+        document.getElementById("status").innerText = "Phantom no detectado. Instala la app.";
+      }
+    }
+
+    // CONECTAR METAMASK (World Chain)
+    async function connectMetaMask() {
+      if (window.ethereum) {
+        try {
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          wallet = window.ethereum.selectedAddress;
+          network = "World Chain";
+          connection = new Web3(window.ethereum);
+          showPayment();
+        } catch (err) {
+          document.getElementById("status").innerText = "Conexión cancelada";
+        }
+      } else {
+        document.getElementById("status").innerText = "MetaMask no detectado. Instala la app.";
+      }
+    }
+
+    function showPayment() {
+      document.getElementById("status").innerText = `${network}: ${wallet.slice(0,6)}...`;
+      document.getElementById("connectSection").classList.add("hidden");
+      document.getElementById("paymentSection").classList.remove("hidden");
+    }
+
+    async function payToPlay() {
+      document.getElementById("status").innerText = "Procesando pago...";
+
+      const amount = 0.1; // 0.1 $STARG
+
+      if (network === "Solana") {
+        try {
+          const from = Solana.PublicKey(wallet);
+          const to = Solana.PublicKey(DEV_WALLET);
+          const tokenMint = Solana.PublicKey(SOLANA_CA);
+
+          const transaction = new Solana.Transaction().add(
+            Solana.Token.createTransferInstruction(
+              Solana.TOKEN_PROGRAM_ID,
+              from,
+              to,
+              from,
+              [],
+              amount * 10 ** 6 // Asumiendo 6 decimales
+            )
+          );
+
+          const signature = await window.solana.signAndSendTransaction(transaction);
+          await connection.confirmTransaction(signature, 'confirmed');
           startGame();
+        } catch (err) {
+          document.getElementById("status").innerText = "Pago cancelado";
+        }
+      } else if (network === "World Chain") {
+        try {
+          const token = new connection.eth.Contract([
+            {"constant":true,"inputs":[{"name":"","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"},
+            {"name":"transfer","inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"outputs":[{"name":"","type":"bool"}],"type":"function"}
+          ], WORLD_CA);
+
+          await token.methods.transfer(DEV_WALLET, amount * 10 ** 18).send({ from: wallet });
+          startGame();
+        } catch (err) {
+          document.getElementById("status").innerText = "Pago cancelado";
         }
       }
-    }, 1000);
-
-    // SIMULAR CONEXIÓN (PARA PRUEBA)
-    // Quita esto en producción
-    setTimeout(() => {
-      if (!wallet) {
-        localStorage.setItem('phantom_connected', 'true');
-        localStorage.setItem('phantom_wallet', '5FHwk...xyz');
-      }
-    }, 3000);
+    }
 
     function startGame() {
-      document.getElementById("status").innerText = `${network}: ${wallet}`;
-      document.getElementById("connectSection").classList.add("hidden");
+      document.getElementById("status").innerText = "¡Juego iniciado!";
+      document.getElementById("paymentSection").classList.add("hidden");
       document.getElementById("gameSection").classList.remove("hidden");
       startHODL();
     }
@@ -139,7 +187,8 @@
 
     function cashOut() {
       if (fragments < 100) return alert("100 fragmentos mínimo");
-      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG`);
+      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG a ${wallet}`);
+      // Aquí añade transferencia real
     }
 
     const style = document.createElement('style');
