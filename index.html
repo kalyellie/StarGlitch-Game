@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Star Glitch: XYRATH-9</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
-  <script src="https://unpkg.com/@solana/pay@0.2.5/dist/index.iife.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: none; }
@@ -19,31 +17,30 @@
     .hodl-area { width: 100vw; height: 50vh; background: rgba(0,255,0,0.1); display: flex; align-items: center; justify-content: center; font-size: 2em; margin: 20px 0; }
     .jackpot { color: #ff0; font-weight: bold; }
     .hidden { display: none; }
-    .pay-btn { background: #00f; color: #fff; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="tentacle">Squid</div>
+    <div class="tentacle">🦑</div>
     <h1>STAR GLITCH: XYRATH-9</h1>
-    <p id="status">Conectando...</p>
+    <p id="status">Conecta tu wallet</p>
 
     <div id="connectSection">
       <button class="btn" onclick="connectPhantom()">CONECTAR PHANTOM</button>
+      <button class="btn" onclick="connectMetaMask()">METAMASK (World Chain)</button>
     </div>
 
     <div id="gameSection" class="hidden">
       <div class="stats">
-        Fragmentos: <span id="fragments">0</span><br>
-        HODL Streak: <span id="streak">0</span>s<br>
-        Jackpot: <span class="jackpot">100 $STARG</span>
+        💰 Fragmentos: <span id="fragments">0</span><br>
+        ⏱️ HODL Streak: <span id="streak">0</span>s<br>
+        🏆 Jackpot: <span class="jackpot">100 $STARG</span>
       </div>
 
       <div class="hodl-area" id="hodlArea">
         <div id="hodlText">¡HODLEA AQUÍ!</div>
       </div>
 
-      <button class="btn pay-btn" onclick="payEntry()">PAGAR 0.1 $STARG</button>
       <button class="btn" onclick="cashOut()">COBRAR $STARG</button>
     </div>
   </div>
@@ -52,64 +49,60 @@
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
 
-    let wallet, connection, fragments = 0, streak = 0, interval, entryPaid = false;
+    let wallet = null, network = null, fragments = 0, streak = 0, interval;
 
-    // CONECTAR PHANTOM
-    async function connectPhantom() {
-      try {
-        const keypair = Solana.Keypair.generate();
-        const dappKey = keypair.publicKey.toBase58();
-        const redirect = encodeURIComponent(window.location.href);
-        const params = new URLSearchParams({
-          app_url: window.location.origin,
-          redirect_link: redirect,
-          dapp_encryption_public_key: dappKey,
-          cluster: 'mainnet-beta'
-        });
-        Telegram.WebApp.openLink(`https://phantom.app/ul/v1/connect?${params.toString()}`);
-      } catch (err) {
-        document.getElementById("status").innerText = "Error";
-      }
+    // CONECTAR PHANTOM CON phantom://
+    function connectPhantom() {
+      const phantomApp = "phantom://connect";
+      const fallback = "https://phantom.app/ul/browse/" + encodeURIComponent(window.location.href);
+
+      // Intentar abrir app
+      Telegram.WebApp.openLink(phantomApp);
+
+      // Fallback si no abre en 1.5s
+      setTimeout(() => {
+        Telegram.WebApp.openLink(fallback);
+      }, 1500);
+
+      document.getElementById("status").innerText = "Abriendo Phantom...";
     }
 
-    // DETECTAR REGRESO
+    // METAMASK
+    function connectMetaMask() {
+      Telegram.WebApp.openLink('metamask://');
+      setTimeout(() => {
+        Telegram.WebApp.openLink('https://metamask.app.link/dapp/' + window.location.host);
+      }, 1500);
+    }
+
+    // POLLING PARA DETECTAR REGRESO
     setInterval(() => {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('phantom_encryption_public_key') && !wallet) {
-        wallet = "5FHwkrdxntdEfV24..."; // Reemplazar con desencriptado real
-        connection = new Solana.Connection("https://api.mainnet-beta.solana.com");
-        document.getElementById("status").innerText = `Solana: ${wallet.slice(0,6)}...`;
-        document.getElementById("connectSection").classList.add("hidden");
-        document.getElementById("gameSection").classList.remove("hidden");
-        startHODL();
+      if (Telegram.WebApp.initDataUnsafe.user && !wallet) {
+        // Simular conexión (en producción: usar localStorage o backend)
+        if (localStorage.getItem('phantom_connected')) {
+          wallet = localStorage.getItem('phantom_wallet') || "Conectada";
+          network = "Solana";
+          startGame();
+        }
       }
     }, 1000);
 
-    // PAGAR ENTRADA
-    async function payEntry() {
-      if (!entryPaid) {
-        const paymentRequest = {
-          recipient: new Solana.PublicKey("TU_WALLET_AQUI"),
-          amount: new Solana.BN(100000000), // 0.1 SOL
-          splToken: new Solana.PublicKey("8o3ziaJUWVNhcryJ1q2nnFR21D7Zx3PHzjiPH8J4azUm"),
-          reference: new Solana.PublicKey(wallet),
-          label: "Star Glitch Entry",
-          message: "0.1 $STARG para jugar"
-        };
-        const { signature } = await SolanaPay.create(paymentRequest).connect({ wallet });
-        alert(`Pagado! Tx: ${signature.slice(0,8)}...`);
-        entryPaid = true;
+    // SIMULAR CONEXIÓN (PARA PRUEBA)
+    // Quita esto en producción
+    setTimeout(() => {
+      if (!wallet) {
+        localStorage.setItem('phantom_connected', 'true');
+        localStorage.setItem('phantom_wallet', '5FHwk...xyz');
       }
+    }, 3000);
+
+    function startGame() {
+      document.getElementById("status").innerText = `${network}: ${wallet}`;
+      document.getElementById("connectSection").classList.add("hidden");
+      document.getElementById("gameSection").classList.remove("hidden");
+      startHODL();
     }
 
-    // COBRAR
-    function cashOut() {
-      if (fragments < 1000) return alert("1000 fragmentos mínimo");
-      alert(`Cobras ${(fragments/10000).toFixed(3)} $STARG`);
-      // Enviar a backend
-    }
-
-    // HODL
     function startHODL() {
       const area = document.getElementById("hodlArea");
       area.addEventListener("touchstart", startStreak);
@@ -138,10 +131,15 @@
 
     function addTentacle() {
       const t = document.createElement("div");
-      t.innerText = "Squid"; t.style.position = "absolute"; t.style.fontSize = "3em";
+      t.innerText = "🦑"; t.style.position = "absolute"; t.style.fontSize = "3em";
       t.style.left = Math.random() * 80 + "%"; t.style.top = "-50px";
       t.style.animation = "fall 3s linear"; document.body.appendChild(t);
       setTimeout(() => t.remove(), 3000);
+    }
+
+    function cashOut() {
+      if (fragments < 100) return alert("100 fragmentos mínimo");
+      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG`);
     }
 
     const style = document.createElement('style');
