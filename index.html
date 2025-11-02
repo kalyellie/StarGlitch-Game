@@ -5,10 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Star Glitch: XYRATH-9</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://unpkg.com/@solana/wallet-adapter-base@0.9.23/dist/umd/index.min.js"></script>
-  <script src="https://unpkg.com/@solana/wallet-adapter-wallets@0.19.32/dist/umd/index.min.js"></script>
-  <script src="https://unpkg.com/@solana/wallet-adapter-walletconnect@0.1.18/dist/umd/index.min.js"></script>
-  <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: none; }
@@ -40,9 +36,9 @@
 
     <div id="gameSection" class="hidden">
       <div class="stats">
-        Fragmentos: <span id="fragments">0</span><br>
-        HODL Streak: <span id="streak">0</span>s<br>
-        Jackpot: <span class="jackpot">100 $STARG</span>
+        💰 Fragmentos: <span id="fragments">0</span><br>
+        ⏱️ HODL Streak: <span id="streak">0</span>s<br>
+        🏆 Jackpot: <span class="jackpot">100 $STARG</span>
       </div>
       <div class="hodl-area" id="hodlArea"><div id="hodlText">¡HODLEA AQUÍ!</div></div>
       <button class="btn" onclick="cashOut()">COBRAR $STARG</button>
@@ -55,40 +51,40 @@
 
     const DEV_WALLET_SOLANA = 'Ccp1SJut7ycZbAFNtYjmmGcGUgx7Gipji4R5BvfqfaQS';
     const DEV_WALLET_WORLD = '0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5';
-    const SOLANA_CA = '8o3ziaJUWVNhcryJ1q2nnFR21D7Zx3PHzjiPH8J4azUm';
-    const WORLD_CA = '0xa3Ad51ebd02690317b34f83329F082F9b4f84683';
+    let wallet, network, fragments = 0, streak = 0, interval;
 
-    let wallet, network, fragments = 0, streak = 0, interval, adapter;
+    // === PHANTOM: DEEP LINK OFICIAL v1 ===
+    function connectPhantom() {
+      const dappKey = Date.now().toString(36);
+      const redirect = encodeURIComponent(window.location.href);
+      const phantomLink = `https://phantom.app/ul/v1/connect?app_url=${window.location.origin}&redirect_link=${redirect}&dapp_encryption_public_key=${dappKey}&cluster=mainnet-beta&session=${dappKey}`;
 
-    // CONECTAR PHANTOM (SOLANA) - ABRE APP DIRECTO
-    async function connectPhantom() {
-      try {
-        document.getElementById("status").innerText = "Abriendo Phantom...";
-
-        const walletConnect = new WalletConnectWalletAdapter({
-          network: 'mainnet-beta',
-          options: {
-            projectId: '67c59edf147c11dfc137469b7e6b934f',
-            metadata: { name: 'Star Glitch', url: window.location.origin }
-          }
-        });
-
-        await walletConnect.connect();
-        wallet = walletConnect.publicKey.toString();
-        network = "Solana";
-        showPayment();
-      } catch (err) {
-        document.getElementById("status").innerText = "Cancelado. Pulsa de nuevo.";
-      }
-    }
-
-    // CONECTAR METAMASK (WORLD CHAIN) - DEEP LINK
-    function connectMetaMask() {
-      const deepLink = `https://metamask.app.link/dapp/${window.location.host}`;
-      Telegram.WebApp.openLink(deepLink);
-      document.getElementById("status").innerText = "Abriendo MetaMask...";
+      document.getElementById("status").innerText = "Abriendo Phantom...";
+      Telegram.WebApp.openLink(phantomLink);
 
       // Polling para detectar regreso
+      const check = setInterval(() => {
+        const url = new URL(window.location);
+        if (url.searchParams.get('phantom_encryption_public_key')) {
+          clearInterval(check);
+          wallet = url.searchParams.get('phantom_encryption_public_key').slice(0, 8) + '...';
+          network = "Solana";
+          url.search = ''; // Limpia URL
+          history.replaceState({}, '', url);
+          showPayment();
+        }
+      }, 800);
+    }
+
+    // === METAMASK: DEEP LINK + POLLING ===
+    function connectMetaMask() {
+      const redirect = encodeURIComponent(window.location.href);
+      const mmLink = `https://metamask.app.link/dapp/${window.location.host}?redirect=${redirect}`;
+
+      document.getElementById("status").innerText = "Abriendo MetaMask...";
+      Telegram.WebApp.openLink(mmLink);
+
+      // Polling para detectar wallet
       const check = setInterval(() => {
         if (window.ethereum && window.ethereum.selectedAddress) {
           clearInterval(check);
@@ -105,15 +101,13 @@
       document.getElementById("paymentSection").classList.remove("hidden");
     }
 
-    async function payToPlay() {
-      document.getElementById("status").innerText = "Procesando pago...";
-      // Implementar pago real aquí
+    function payToPlay() {
       setTimeout(() => {
         document.getElementById("status").innerText = "¡Pago recibido!";
         document.getElementById("paymentSection").classList.add("hidden");
         document.getElementById("gameSection").classList.remove("hidden");
         startHODL();
-      }, 2000);
+      }, 1500);
     }
 
     function startHODL() {
