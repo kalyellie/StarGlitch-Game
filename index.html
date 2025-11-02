@@ -49,57 +49,71 @@
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
 
-    const DEV_WALLET_SOLANA = 'Ccp1SJut7ycZbAFNtYjmmGcGUgx7Gipji4R5BvfqfaQS';
-    const DEV_WALLET_WORLD = '0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5';
-    let wallet, network, fragments = 0, streak = 0, interval;
+    let wallet = null, network = null, fragments = 0, streak = 0, interval;
 
-    // === PHANTOM: DEEP LINK OFICIAL v1 ===
+    // === PHANTOM: DEEP LINK + CALLBACK CON PARAMS ===
     function connectPhantom() {
-      const dappKey = Date.now().toString(36);
-      const redirect = encodeURIComponent(window.location.href);
-      const phantomLink = `https://phantom.app/ul/v1/connect?app_url=${window.location.origin}&redirect_link=${redirect}&dapp_encryption_public_key=${dappKey}&cluster=mainnet-beta&session=${dappKey}`;
+      const session = Date.now();
+      localStorage.setItem('connect_session', session);
+      const redirect = encodeURIComponent(`${window.location.href}?session=${session}&network=solana`);
+      const phantomLink = `https://phantom.app/ul/browse/${redirect}?ref=star-glitch`;
 
       document.getElementById("status").innerText = "Abriendo Phantom...";
       Telegram.WebApp.openLink(phantomLink);
-
-      // Polling para detectar regreso
-      const check = setInterval(() => {
-        const url = new URL(window.location);
-        if (url.searchParams.get('phantom_encryption_public_key')) {
-          clearInterval(check);
-          wallet = url.searchParams.get('phantom_encryption_public_key').slice(0, 8) + '...';
-          network = "Solana";
-          url.search = ''; // Limpia URL
-          history.replaceState({}, '', url);
-          showPayment();
-        }
-      }, 800);
     }
 
-    // === METAMASK: DEEP LINK + POLLING ===
+    // === METAMASK: DEEP LINK + CALLBACK CON PARAMS ===
     function connectMetaMask() {
-      const redirect = encodeURIComponent(window.location.href);
+      const session = Date.now();
+      localStorage.setItem('connect_session', session);
+      const redirect = encodeURIComponent(`${window.location.href}?session=${session}&network=world`);
       const mmLink = `https://metamask.app.link/dapp/${window.location.host}?redirect=${redirect}`;
 
       document.getElementById("status").innerText = "Abriendo MetaMask...";
       Telegram.WebApp.openLink(mmLink);
+    }
 
-      // Polling para detectar wallet
-      const check = setInterval(() => {
-        if (window.ethereum && window.ethereum.selectedAddress) {
-          clearInterval(check);
-          wallet = window.ethereum.selectedAddress;
-          network = "World Chain";
-          showPayment();
+    // === POLLING: DETECTA REGRESO Y CONEXIÓN ===
+    setInterval(() => {
+      const url = new URL(window.location);
+      const session = url.searchParams.get('session');
+      const networkParam = url.searchParams.get('network');
+      const storedSession = localStorage.getItem('connect_session');
+
+      if (session && storedSession === session) {
+        // Limpiar URL
+        url.search = '';
+        history.replaceState({}, '', url);
+        localStorage.removeItem('connect_session');
+
+        // Simular conexión (en producción: usar Phantom SDK o MetaMask)
+        if (networkParam === 'solana') {
+          wallet = '5FHwk...xyz'; // ← En producción: obtener de Phantom
+          network = 'Solana';
+        } else if (networkParam === 'world') {
+          wallet = '0xd7fa...14bc5'; // ← En producción: obtener de MetaMask
+          network = 'World Chain';
         }
-      }, 1000);
-    }
 
-    function showPayment() {
-      document.getElementById("status").innerText = `${network}: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
-      document.getElementById("connectSection").classList.add("hidden");
-      document.getElementById("paymentSection").classList.remove("hidden");
-    }
+        if (wallet) {
+          document.getElementById("status").innerText = `${network}: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
+          document.getElementById("connectSection").classList.add("hidden");
+          document.getElementById("paymentSection").classList.remove("hidden");
+        }
+      }
+    }, 1000);
+
+    // === SIMULACIÓN DE CONEXIÓN (PARA PRUEBA) ===
+    // QUITA ESTO EN PRODUCCIÓN
+    setTimeout(() => {
+      if (!wallet && Math.random() > 0.7) {
+        wallet = '5FHwkPrz1GD...xyz';
+        network = 'Solana';
+        document.getElementById("status").innerText = `${network}: ${wallet.slice(0,6)}...`;
+        document.getElementById("connectSection").classList.add("hidden");
+        document.getElementById("paymentSection").classList.remove("hidden");
+      }
+    }, 5000);
 
     function payToPlay() {
       setTimeout(() => {
