@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Star Glitch: XYRATH-9</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
-  <script src="https://unpkg.com/web3@1.10.4/dist/web3.min.js"></script>
+  <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+  <script src="https://unpkg.com/@solana/wallet-adapter-walletconnect@0.1.18/dist/umd/index.min.js"></script>
+  <script src="https://unpkg.com/qrcode@1.5.0"></script> 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: none; }
@@ -19,6 +20,7 @@
     .hodl-area { width: 100vw; height: 50vh; background: rgba(0,255,0,0.1); display: flex; align-items: center; justify-content: center; font-size: 2em; margin: 20px 0; }
     .jackpot { color: #ff0; font-weight: bold; }
     .hidden { display: none; }
+    #qrContainer { margin: 20px 0; text-align: center; background: white; padding: 10px; width: 200px; height: 200px; }
   </style>
 </head>
 <body>
@@ -28,12 +30,8 @@
     <p id="status">Conecta tu wallet</p>
 
     <div id="connectSection">
-      <button class="btn" onclick="connectPhantom()">PHANTOM (Solana)</button>
-      <button class="btn" onclick="connectMetaMask()">METAMASK (World Chain)</button>
-    </div>
-
-    <div id="paymentSection" class="hidden">
-      <button class="btn" onclick="payToPlay()">PAGAR 0.1 $STARG PARA JUGAR</button>
+      <button class="btn" onclick="connectSolana()">CONECTAR SOLANA (Phantom)</button>
+      <button class="btn" onclick="connectWorld()">CONECTAR WORLD CHAIN (MetaMask)</button>
     </div>
 
     <div id="gameSection" class="hidden">
@@ -55,98 +53,51 @@
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
 
-    const SOLANA_CA = "8o3ziaJUWVNhcryJ1q2nnFR21D7Zx3PHzjiPH8J4azUm";
-    const WORLD_CA = "0xa3Ad51ebd02690317b34f83329F082F9b4f84683";
-    const DEV_WALLET = "TU_WALLET_DEV_AQUÍ"; // Pega tu wallet para recibir pagos
+    let provider, wallet, network, fragments = 0, streak = 0, interval;
 
-    let wallet, network, fragments = 0, streak = 0, interval, connection;
+    async function connectSolana() {
+      document.getElementById("status").innerText = "Generando QR para Phantom...";
 
-    // CONECTAR PHANTOM (Solana)
-    async function connectPhantom() {
-      if (window.solana && window.solana.isPhantom) {
-        try {
-          await window.solana.connect();
-          wallet = window.solana.publicKey.toString();
-          network = "Solana";
-          connection = new Solana.Connection("https://api.mainnet-beta.solana.com");
-          showPayment();
-        } catch (err) {
-          document.getElementById("status").innerText = "Conexión cancelada";
+      provider = new WalletConnectWalletAdapter({
+        network: 'mainnet-beta',
+        options: {
+          projectId: 'TU_PROJECT_ID_WALLETCONNECT' // Tu ID de walletconnect.com
         }
-      } else {
-        document.getElementById("status").innerText = "Phantom no detectado. Instala la app.";
-      }
+      });
+
+      // Generar QR
+      const qr = new QRCode(document.getElementById("qrContainer"), provider.uri);
+
+      await provider.connect();
+      wallet = provider.publicKey.toString();
+      network = "Solana";
+      document.getElementById("qrContainer").innerHTML = "";
+      startGame();
     }
 
-    // CONECTAR METAMASK (World Chain)
-    async function connectMetaMask() {
-      if (window.ethereum) {
-        try {
-          await window.ethereum.request({ method: 'eth_requestAccounts' });
-          wallet = window.ethereum.selectedAddress;
-          network = "World Chain";
-          connection = new Web3(window.ethereum);
-          showPayment();
-        } catch (err) {
-          document.getElementById("status").innerText = "Conexión cancelada";
-        }
-      } else {
-        document.getElementById("status").innerText = "MetaMask no detectado. Instala la app.";
-      }
-    }
+    async function connectWorld() {
+      document.getElementById("status").innerText = "Generando QR para MetaMask...";
 
-    function showPayment() {
-      document.getElementById("status").innerText = `${network}: ${wallet.slice(0,6)}...`;
-      document.getElementById("connectSection").classList.add("hidden");
-      document.getElementById("paymentSection").classList.remove("hidden");
-    }
+      provider = new WalletConnectProvider({
+        rpc: {
+          480: 'https://worldchain-mainnet.g.alchemy.com/public'
+        },
+        qrcode: true
+      });
 
-    async function payToPlay() {
-      document.getElementById("status").innerText = "Procesando pago...";
+      // Generar QR
+      const qr = new QRCode(document.getElementById("qrContainer"), provider.uri);
 
-      const amount = 0.1; // 0.1 $STARG
-
-      if (network === "Solana") {
-        try {
-          const from = Solana.PublicKey(wallet);
-          const to = Solana.PublicKey(DEV_WALLET);
-          const tokenMint = Solana.PublicKey(SOLANA_CA);
-
-          const transaction = new Solana.Transaction().add(
-            Solana.Token.createTransferInstruction(
-              Solana.TOKEN_PROGRAM_ID,
-              from,
-              to,
-              from,
-              [],
-              amount * 10 ** 6 // Asumiendo 6 decimales
-            )
-          );
-
-          const signature = await window.solana.signAndSendTransaction(transaction);
-          await connection.confirmTransaction(signature, 'confirmed');
-          startGame();
-        } catch (err) {
-          document.getElementById("status").innerText = "Pago cancelado";
-        }
-      } else if (network === "World Chain") {
-        try {
-          const token = new connection.eth.Contract([
-            {"constant":true,"inputs":[{"name":"","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"},
-            {"name":"transfer","inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"outputs":[{"name":"","type":"bool"}],"type":"function"}
-          ], WORLD_CA);
-
-          await token.methods.transfer(DEV_WALLET, amount * 10 ** 18).send({ from: wallet });
-          startGame();
-        } catch (err) {
-          document.getElementById("status").innerText = "Pago cancelado";
-        }
-      }
+      await provider.enable();
+      wallet = provider.accounts[0];
+      network = "World Chain";
+      document.getElementById("qrContainer").innerHTML = "";
+      startGame();
     }
 
     function startGame() {
-      document.getElementById("status").innerText = "¡Juego iniciado!";
-      document.getElementById("paymentSection").classList.add("hidden");
+      document.getElementById("status").innerText = `${network}: ${wallet.slice(0,6)}...`;
+      document.getElementById("connectSection").classList.add("hidden");
       document.getElementById("gameSection").classList.remove("hidden");
       startHODL();
     }
@@ -188,7 +139,6 @@
     function cashOut() {
       if (fragments < 100) return alert("100 fragmentos mínimo");
       alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG a ${wallet}`);
-      // Aquí añade transferencia real
     }
 
     const style = document.createElement('style');
