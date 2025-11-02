@@ -63,53 +63,55 @@
     const WORLD_CA = '0xa3Ad51ebd02690317b34f83329F082F9b4f84683';
     const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
     const WORLD_RPC = 'https://worldchain-mainnet.g.alchemy.com/public';
+    const SOLANA_DECIMALS = 6; // Ajusta si es diferente
+    const WORLD_DECIMALS = 18; // ERC20 estándar
 
     let provider, wallet, network, fragments = 0, streak = 0, interval;
 
-    function connectSolana() {
+    async function connectSolana() {
       document.getElementById("status").innerText = "Abriendo Phantom...";
 
-      const callback = encodeURIComponent(window.location.href);
-      const phantomLink = `https://phantom.app/ul/browse/${callback}?ref=starglitch`;
+      const callback = encodeURIComponent(window.location.href + "?solana=connected");
+
+      const phantomLink = `https://phantom.app/ul/v1/connect?app_url=${encodeURIComponent(window.location.origin)}&redirect_link=${callback}&dapp_encryption_public_key=${Date.now().toString(36)}&cluster=mainnet-beta`;
 
       Telegram.WebApp.openLink(phantomLink);
 
       const check = setInterval(async () => {
-        if (window.solana && window.solana.isPhantom) {
-          try {
-            await window.solana.connect();
-            wallet = window.solana.publicKey.toString();
-            network = "Solana";
-            provider = window.solana;
-            clearInterval(check);
-            showPayment();
-          } catch (err) {
-            console.log("Error: " + err.message);
-          }
+        if (window.location.search.includes('solana=connected') ) {
+          clearInterval(check);
+          await window.solana.connect();
+          wallet = window.solana.publicKey.toString();
+          network = "Solana";
+          provider = window.solana;
+          const url = new URL(window.location);
+          url.search = '';
+          history.replaceState({}, '', url);
+          showPayment();
         }
       }, 500);
     }
 
-    function connectWorld() {
+    async function connectWorld() {
       document.getElementById("status").innerText = "Abriendo MetaMask...";
 
-      const callback = encodeURIComponent(window.location.href);
-      const mmLink = `https://metamask.app.link/dapp/${window.location.host}?redirect=${callback}`;
+      const callback = encodeURIComponent(window.location.href + "?world=connected");
+
+      const mmLink = `https://metamask.app.link/dapp/${window.location.host}?redirect_link=${callback}`;
 
       Telegram.WebApp.openLink(mmLink);
 
       const check = setInterval(async () => {
-        if (window.ethereum) {
-          try {
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
-            wallet = window.ethereum.selectedAddress;
-            network = "World Chain";
-            provider = window.ethereum;
-            clearInterval(check);
-            showPayment();
-          } catch (err) {
-            console.log("Error: " + err.message);
-          }
+        if (window.location.search.includes('world=connected') ) {
+          clearInterval(check);
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          wallet = window.ethereum.selectedAddress;
+          network = "World Chain";
+          provider = window.ethereum;
+          const url = new URL(window.location);
+          url.search = '';
+          history.replaceState({}, '', url);
+          showPayment();
         }
       }, 500);
     }
@@ -124,7 +126,7 @@
     async function payToPlay() {
       document.getElementById("status").innerText = "Procesando pago...";
 
-      const amount = 0.1 * 10**6; // 0.1 $STARG (6 decimales)
+      const amount = 0.1 * 10 ** (network === "Solana" ? SOLANA_DECIMALS : WORLD_DECIMALS);
 
       try {
         if (network === "Solana") {
@@ -195,7 +197,7 @@
     async function cashOut() {
       if (fragments < 100) return alert("100 fragmentos mínimo");
 
-      const amount = (fragments / 1000).toFixed(3) * 10**6; // 6 decimales
+      const amount = (fragments / 1000).toFixed(3) * 10** (network === "Solana" ? SOLANA_DECIMALS : WORLD_DECIMALS);
 
       try {
         document.getElementById("status").innerText = "Cobrando...";
@@ -249,8 +251,8 @@
     }
 
     function loadState() {
-      fragments = parseInt(localStorage.getItem('fragments') || 0);
-      streak = parseInt(localStorage.getItem('streak') || 0);
+      fragments = parseFloat(localStorage.getItem('fragments') || 0);
+      streak = parseFloat(localStorage.getItem('streak') || 0);
       document.getElementById("fragments").innerText = fragments;
       document.getElementById("streak").innerText = streak;
     }
