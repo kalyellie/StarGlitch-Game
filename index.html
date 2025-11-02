@@ -77,17 +77,19 @@
 
       Telegram.WebApp.openLink(phantomLink);
 
+      // Polling para detectar conexión al regreso
       const check = setInterval(async () => {
-        if (window.location.search.includes('solana=connected') ) {
-          clearInterval(check);
-          await window.solana.connect();
-          wallet = window.solana.publicKey.toString();
-          network = "Solana";
-          provider = window.solana;
-          const url = new URL(window.location);
-          url.search = '';
-          history.replaceState({}, '', url);
-          showPayment();
+        if (window.solana && window.solana.isPhantom) {
+          try {
+            const response = await window.solana.connect({ onlyIfTrusted: true });
+            wallet = response.publicKey.toString();
+            network = "Solana";
+            provider = window.solana;
+            clearInterval(check);
+            showPayment();
+          } catch (err) {
+            console.log("Error Phantom: " + err.message);
+          }
         }
       }, 500);
     }
@@ -101,17 +103,19 @@
 
       Telegram.WebApp.openLink(mmLink);
 
+      // Polling para detectar conexión al regreso
       const check = setInterval(async () => {
-        if (window.location.search.includes('world=connected') ) {
-          clearInterval(check);
-          await window.ethereum.request({ method: 'eth_requestAccounts' });
-          wallet = window.ethereum.selectedAddress;
-          network = "World Chain";
-          provider = window.ethereum;
-          const url = new URL(window.location);
-          url.search = '';
-          history.replaceState({}, '', url);
-          showPayment();
+        if (window.ethereum) {
+          try {
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
+            wallet = window.ethereum.selectedAddress;
+            network = "World Chain";
+            provider = window.ethereum;
+            clearInterval(check);
+            showPayment();
+          } catch (err) {
+            console.log("Error MetaMask: " + err.message);
+          }
         }
       }, 500);
     }
@@ -251,8 +255,8 @@
     }
 
     function loadState() {
-      fragments = parseFloat(localStorage.getItem('fragments') || 0);
-      streak = parseFloat(localStorage.getItem('streak') || 0);
+      fragments = parseInt(localStorage.getItem('fragments') || 0);
+      streak = parseInt(localStorage.getItem('streak') || 0);
       document.getElementById("fragments").innerText = fragments;
       document.getElementById("streak").innerText = streak;
     }
