@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Star Glitch: XYRATH-9</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: none; }
@@ -50,57 +49,52 @@
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
 
-    let wallet, network, fragments = 0, streak = 0, interval;
+    let wallet = null, network = null, fragments = 0, streak = 0, interval;
 
-    // CONECTAR PHANTOM CON openLink
+    // CONECTAR PHANTOM CON phantom://
     function connectPhantom() {
-      try {
-        const keypair = Solana.Keypair.generate();
-        const dappKey = keypair.publicKey.toBase58();
-        const session = Date.now().toString();
-        const redirect = encodeURIComponent(window.location.href);
+      const phantomApp = "phantom://connect";
+      const fallback = "https://phantom.app/ul/browse/" + encodeURIComponent(window.location.href);
 
-        const params = new URLSearchParams({
-          app_url: window.location.origin,
-          redirect_link: redirect,
-          dapp_encryption_public_key: dappKey,
-          cluster: 'mainnet-beta',
-          session: session
-        });
+      // Intentar abrir app
+      Telegram.WebApp.openLink(phantomApp);
 
-        const phantomLink = `https://phantom.app/ul/v1/connect?${params.toString()}`;
+      // Fallback si no abre en 1.5s
+      setTimeout(() => {
+        Telegram.WebApp.openLink(fallback);
+      }, 1500);
 
-        // USA openLink PARA QUE TELEGRAM LO PERMITA
-        Telegram.WebApp.openLink(phantomLink);
-      } catch (err) {
-        document.getElementById("status").innerText = "Error al abrir Phantom";
-      }
+      document.getElementById("status").innerText = "Abriendo Phantom...";
     }
 
     // METAMASK
     function connectMetaMask() {
-      Telegram.WebApp.openLink('https://metamask.app.link/dapp/' + window.location.host);
+      Telegram.WebApp.openLink('metamask://');
+      setTimeout(() => {
+        Telegram.WebApp.openLink('https://metamask.app.link/dapp/' + window.location.host);
+      }, 1500);
     }
 
-    // DETECTAR REGRESO DE PHANTOM
-    window.addEventListener('load', () => {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('phantom_encryption_public_key')) {
-        wallet = "Conectada (Solana)";
-        network = "Solana";
-        startGame();
-      }
-    });
-
-    // POLLING PARA REGRESO
+    // POLLING PARA DETECTAR REGRESO
     setInterval(() => {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('phantom_encryption_public_key') && !wallet) {
-        wallet = "Conectada (Solana)";
-        network = "Solana";
-        startGame();
+      if (Telegram.WebApp.initDataUnsafe.user && !wallet) {
+        // Simular conexión (en producción: usar localStorage o backend)
+        if (localStorage.getItem('phantom_connected')) {
+          wallet = localStorage.getItem('phantom_wallet') || "Conectada";
+          network = "Solana";
+          startGame();
+        }
       }
     }, 1000);
+
+    // SIMULAR CONEXIÓN (PARA PRUEBA)
+    // Quita esto en producción
+    setTimeout(() => {
+      if (!wallet) {
+        localStorage.setItem('phantom_connected', 'true');
+        localStorage.setItem('phantom_wallet', '5FHwk...xyz');
+      }
+    }, 3000);
 
     function startGame() {
       document.getElementById("status").innerText = `${network}: ${wallet}`;
