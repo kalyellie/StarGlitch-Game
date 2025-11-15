@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Star Glitch: XYRATH-9</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+  <script src="https://unpkg.com/@solana/wallet-adapter-walletconnect@0.1.18/dist/umd/index.min.js"></script>
+  <script src="https://unpkg.com/qrcode@1.5.0"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/web3@1.10.4/dist/web3.min.js"></script>
   <script src="https://unpkg.com/@solana/spl-token@0.4.8/lib/index.iife.min.js"></script>
@@ -20,6 +23,7 @@
     .hodl-area { width: 100vw; height: 50vh; background: rgba(0,255,0,0.1); display: flex; align-items: center; justify-content: center; font-size: 2em; margin: 20px 0; }
     .jackpot { color: #ff0; font-weight: bold; }
     .hidden { display: none; }
+    #qrCode { width: 200px; height: 200px; margin: 20px auto; }
   </style>
 </head>
 <body>
@@ -51,12 +55,15 @@
       <button class="btn" onclick="cashOut()">COBRAR $STARG</button>
       <button class="btn" onclick="resetGame()">RESET JUEGO</button>
     </div>
+
+    <div id="qrCode" class="hidden"></div>
   </div>
 
   <script>
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
 
+    const PROJECT_ID = '67c59edf147c11dfc137469b7e6b934f';
     const DEV_WALLET_SOLANA = 'Ccp1SJut7ycZbAFNtYjmmGcGUgx7Gipji4R5BvfqfaQS';
     const DEV_WALLET_WORLD = '0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5';
     const SOLANA_CA = '3nhJUCbLwoT7w1iUWE1MUER1YbUmqJxeqBVpsBZFpump'; // Nuevo Pump.fun
@@ -69,53 +76,35 @@
     let provider, wallet, network, fragments = 0, streak = 0, interval;
 
     async function connectSolana() {
-      document.getElementById("status").innerText = "Abriendo Phantom...";
+      document.getElementById("status").innerText = "Generando QR para Phantom...";
 
-      const callback = encodeURIComponent(window.location.href + "?solana=connected");
+      provider = new WalletConnectProvider({
+        rpc: { "1": SOLANA_RPC },
+        qrcode: true,
+        projectId: PROJECT_ID
+      });
 
-      const phantomLink = `https://phantom.app/ul/v1/connect?app_url=${encodeURIComponent(window.location.origin)}&redirect_link=${callback}&dapp_encryption_public_key=${Date.now().toString(36)}&cluster=mainnet-beta`;
-
-      Telegram.WebApp.openLink(phantomLink);
-
-      const check = setInterval(async () => {
-        if (window.solana && window.solana.isPhantom) {
-          try {
-            const response = await window.solana.connect({ onlyIfTrusted: true });
-            wallet = response.publicKey.toString();
-            network = "Solana";
-            provider = window.solana;
-            clearInterval(check);
-            showPayment();
-          } catch (err) {
-            console.log("Error Phantom: " + err.message);
-          }
-        }
-      }, 500);
+      await provider.enable();
+      wallet = provider.accounts[0];
+      network = "Solana";
+      document.getElementById("qrCode").classList.add("hidden");
+      showPayment();
     }
 
     async function connectWorld() {
-      document.getElementById("status").innerText = "Abriendo MetaMask...";
+      document.getElementById("status").innerText = "Generando QR para MetaMask...";
 
-      const callback = encodeURIComponent(window.location.href + "?world=connected");
+      provider = new WalletConnectProvider({
+        rpc: { "480": WORLD_RPC },
+        qrcode: true,
+        projectId: PROJECT_ID
+      });
 
-      const mmLink = `https://metamask.app.link/dapp/${window.location.host}?redirect_link=${callback}`;
-
-      Telegram.WebApp.openLink(mmLink);
-
-      const check = setInterval(async () => {
-        if (window.ethereum) {
-          try {
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
-            wallet = window.ethereum.selectedAddress;
-            network = "World Chain";
-            provider = window.ethereum;
-            clearInterval(check);
-            showPayment();
-          } catch (err) {
-            console.log("Error MetaMask: " + err.message);
-          }
-        }
-      }, 500);
+      await provider.enable();
+      wallet = provider.accounts[0];
+      network = "World Chain";
+      document.getElementById("qrCode").classList.add("hidden");
+      showPayment();
     }
 
     function showPayment() {
@@ -128,7 +117,7 @@
     async function payToPlay() {
       document.getElementById("status").innerText = "Procesando pago...";
 
-      const amount = 0.1 * 10 ** (network === "Solana" ? SOLANA_DECIMALS : WORLD_DECIMALS);
+      const amount = 0.1 * 10** (network === "Solana" ? SOLANA_DECIMALS : WORLD_DECIMALS);
 
       try {
         if (network === "Solana") {
@@ -148,9 +137,8 @@
             )
           );
 
-          const signature = await provider.signTransaction(transaction);
-          const txId = await connection.sendRawTransaction(transaction.serialize());
-          await connection.confirmTransaction(txId);
+          const signature = await provider.signAndSendTransaction(transaction);
+          await connection.confirmTransaction(signature, 'confirmed');
         } else if (network === "World Chain") {
           const web3 = new Web3(provider);
           const token = new web3.eth.Contract([{"name":"transfer","inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"outputs":[{"name":"","type":"bool"}],"type":"function"} ], WORLD_CA);
@@ -221,9 +209,8 @@
             )
           );
 
-          const signature = await provider.signTransaction(transaction);
-          const txId = await connection.sendRawTransaction(transaction.serialize());
-          await connection.confirmTransaction(txId);
+          const signature = await provider.signAndSendTransaction(transaction);
+          await connection.confirmTransaction(signature, 'confirmed');
         } else if (network === "World Chain") {
           const web3 = new Web3(provider);
           const token = new web3.eth.Contract([{"name":"transfer","inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"outputs":[{"name":"","type":"bool"}],"type":"function"} ], WORLD_CA);
