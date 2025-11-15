@@ -64,26 +64,27 @@
 
     let wallet, network, provider, fragments = 0, streak = 0, interval;
 
-    // === PHANTOM (SOLANA) ===
-    function connectPhantom() {
-      const session = Date.now();
-      localStorage.setItem('connect_session', session);
-      localStorage.setItem('connect_type', 'phantom');
+    // === CONEXIÓN PHANTOM (SOLANA) ===
+    async function connectPhantom() {
+      const session = Date.now().toString();
+      sessionStorage.setItem('connect_session', session);
+      sessionStorage.setItem('connect_type', 'phantom');
 
+      const dappUrl = encodeURIComponent(window.location.origin);
       const redirect = encodeURIComponent(`${window.location.href}?session=${session}&network=solana`);
-      const link = `https://phantom.app/ul/browse/${redirect}?ref=star-glitch`;
+      const link = `https://phantom.app/ul/v1/connect?app_url=${dappUrl}&redirect_link=${redirect}&cluster=mainnet-beta`;
 
       document.getElementById("status").innerText = "Abriendo Phantom...";
       Telegram.WebApp.openLink(link);
 
-      startPolling(session, 'phantom');
+      await pollForConnection(session, 'phantom');
     }
 
-    // === METAMASK (WORLD CHAIN) ===
-    function connectMetaMask() {
-      const session = Date.now();
-      localStorage.setItem('connect_session', session);
-      localStorage.setItem('connect_type', 'metamask');
+    // === CONEXIÓN METAMASK (WORLD CHAIN) ===
+    async function connectMetaMask() {
+      const session = Date.now().toString();
+      sessionStorage.setItem('connect_session', session);
+      sessionStorage.setItem('connect_type', 'metamask');
 
       const redirect = encodeURIComponent(`${window.location.href}?session=${session}&network=world`);
       const link = `https://metamask.app.link/dapp/${window.location.host}?redirect=${redirect}`;
@@ -91,48 +92,54 @@
       document.getElementById("status").innerText = "Abriendo MetaMask...";
       Telegram.WebApp.openLink(link);
 
-      startPolling(session, 'metamask');
+      await pollForConnection(session, 'metamask');
     }
 
-    // === POLLING PARA DETECTAR REGRESO ===
-    function startPolling(session, type) {
+    // === POLLING MEJORADO CON TIMEOUT ===
+    async function pollForConnection(session, type) {
       let attempts = 0;
-      const maxAttempts = 60; // 30 segundos
+      const maxAttempts = 60;
 
-      const check = setInterval(() => {
+      const check = setInterval(async () => {
         attempts++;
         const url = new URL(window.location);
         const s = url.searchParams.get('session');
         const n = url.searchParams.get('network');
-        const stored = localStorage.getItem('connect_session');
+        const stored = sessionStorage.getItem('connect_session');
 
         if (s && s === stored && n) {
           clearInterval(check);
           url.search = '';
           history.replaceState({}, '', url);
-          localStorage.removeItem('connect_session');
-          localStorage.removeItem('connect_type');
+          sessionStorage.removeItem('connect_session');
+          sessionStorage.removeItem('connect_type');
 
-          if (type === 'phantom' && window.solana) {
-            wallet = window.solana.publicKey.toString();
-            network = 'Solana';
-            provider = window.solana;
+          if (type === 'phantom' && window.solana?.isPhantom) {
+            try {
+              const resp = await window.solana.connect();
+              wallet = resp.publicKey.toString();
+              network = 'Solana';
+              provider = window.solana;
+              showPayment();
+            } catch (err) {
+              document.getElementById("status").innerText = "Conexión cancelada.";
+            }
           } else if (type === 'metamask' && window.ethereum) {
-            wallet = window.ethereum.selectedAddress;
-            network = 'World Chain';
-            provider = window.ethereum;
-          }
-
-          if (wallet) {
-            showPayment();
-          } else {
-            document.getElementById("status").innerText = "Conexión fallida. Intenta de nuevo.";
+            try {
+              await window.ethereum.request({ method: 'eth_requestAccounts' });
+              wallet = window.ethereum.selectedAddress;
+              network = 'World Chain';
+              provider = window.ethereum;
+              showPayment();
+            } catch (err) {
+              document.getElementById("status").innerText = "Conexión cancelada.";
+            }
           }
         }
 
         if (attempts >= maxAttempts) {
           clearInterval(check);
-          document.getElementById("status").innerText = "Tiempo agotado. Pulsa de nuevo.";
+          document.getElementById("status").innerText = "Tiempo agotado. Intenta de nuevo.";
         }
       }, 500);
     }
@@ -155,7 +162,7 @@
           const to = new Solana.PublicKey(DEV_WALLET_SOLANA);
           const mint = new Solana.PublicKey(SOLANA_CA);
 
-          const transaction = new Solana.Transaction().add(
+          const tx = new Solana.Transaction().add(
             SplToken.createTransferInstruction(
               SplToken.TOKEN_PROGRAM_ID,
               from,
@@ -166,11 +173,13 @@
             )
           );
 
-          const { signature } = await provider.signAndSendTransaction(transaction);
+          const { signature } = await provider.signAndSendTransaction(tx);
           await connection.confirmTransaction(signature);
         } else {
           const web3 = new Web3(provider);
-          const token = new web3.eth.Contract([{"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"}], WORLD_CA);
+          const token = new web3.eth.Contract([
+            { "inputs": [{ "name": "_to", "type": "address" }, { "name": "_value", "type": "uint256" }], "name": "transfer", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }
+          ], WORLD_CA);
           await token.methods.transfer(DEV_WALLET_WORLD, amount).send({ from: wallet });
         }
 
@@ -179,20 +188,20 @@
         document.getElementById("gameSection").classList.remove("hidden");
         startHODL();
       } catch (err) {
-        document.getElementById("status").innerText = "Error en pago: " + (err.message || "Cancelado");
+        document.getElementById("status").innerText = "Error: " + (err.message || "Cancelado");
       }
     }
 
     function startHODL() {
       const area = document.getElementById("hodlArea");
-      area.addEventListener("touchstart", startStreak);
+      area.addEventListener("touchstart", startStreak, { passive: false });
       area.addEventListener("mousedown", startStreak);
       area.addEventListener("touchend", endStreak);
       area.addEventListener("mouseup", endStreak);
     }
 
     function startStreak(e) {
-      e.preventDefault();
+      if (e.type === 'touchstart') e.preventDefault();
       streak = 0;
       document.getElementById("hodlText").innerText = "HODLEANDO!";
       interval = setInterval(() => {
@@ -214,15 +223,14 @@
 
     async function cashOut() {
       if (fragments < 100) return alert("Mínimo 100 fragmentos");
-      const amount = Math.floor(fragments / 1000) * 10 ** (network === 'Solana' ? SOLANA_DECIMALS : WORLD_DECIMALS);
       alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG`);
       resetGame();
     }
 
     function addTentacle() {
       const t = document.createElement("div");
-      t.innerText = "Squid"; t.style.position = "absolute"; t.style.fontSize = "3em";
-      t.style.left = Math.random() * 80 + "%"; t.style.top = "-50px";
+      t.innerText = "Squid"; t.className = "tentacle";
+      t.style.position = "absolute"; t.style.left = Math.random() * 80 + "%"; t.style.top = "-50px";
       t.style.animation = "fall 3s linear"; document.body.appendChild(t);
       setTimeout(() => t.remove(), 3000);
     }
