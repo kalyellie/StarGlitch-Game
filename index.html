@@ -24,7 +24,7 @@
 </head>
 <body>
   <div class="container">
-    <div class="tentacle">🦑</div>
+    <div class="tentacle">Squid</div>
     <h1>STAR GLITCH: XYRATH-9</h1>
     <p id="status">Conecta tu wallet</p>
 
@@ -45,6 +45,7 @@
       </div>
       <div class="hodl-area" id="hodlArea"><div id="hodlText">¡HODLEA AQUÍ!</div></div>
       <button class="btn" onclick="cashOut()">COBRAR $STARG</button>
+      <button class="btn" onclick="resetGame()">RESET</button>
     </div>
   </div>
 
@@ -52,91 +53,104 @@
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
 
+    // === CONTRATOS ACTUALIZADOS ===
     const DEV_WALLET_SOLANA = 'Ccp1SJut7ycZbAFNtYjmmGcGUgx7Gipji4R5BvfqfaQS';
     const DEV_WALLET_WORLD = '0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5';
-    const SOLANA_CA = '8o3ziaJUWVNhcryJ1q2nnFR21D7Zx3PHzjiPH8J4azUm';
+    const SOLANA_CA = '3nhJUCbLwoT7w1iUWE1MUER1YbUmqJxeqBVpsBZFpump'; // NUEVO PUMP.FUN
     const WORLD_CA = '0xa3Ad51ebd02690317b34f83329F082F9b4f84683';
+    const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
+    const WORLD_RPC = 'https://worldchain-mainnet.g.alchemy.com/public';
+    const SOLANA_DECIMALS = 6;
 
     let wallet, network, provider, fragments = 0, streak = 0, interval;
 
-    // === CONEXIÓN UNIVERSAL CON WALLET CONNECT v2 ===
+    // === CONEXIÓN CON DEEP LINK + POLLING ===
     async function connectWallet(type) {
-      const sessionId = Date.now().toString();
-      localStorage.setItem('connect_session', sessionId);
+      const session = Date.now();
+      localStorage.setItem('connect_session', session);
       localStorage.setItem('connect_type', type);
 
-      const wc = new WalletConnectProvider({
-        projectId: '67c59edf147c11dfc137469b7e6b934f',
-        chains: type === 'phantom' ? [1] : [480], // Solana no usa chainId, pero WC lo requiere
-        showQrModal: false
-      });
-
-      wc.on("display_uri", (uri) => {
-        const link = type === 'phantom' 
-          ? `https://phantom.app/ul/browse/${encodeURIComponent(uri)}?ref=star-glitch`
-          : `https://metamask.app.link/wc?uri=${encodeURIComponent(uri)}`;
-
-        const popup = window.open(link, '_blank', 'width=400,height=600');
-        if (!popup) {
-          document.getElementById("status").innerText = "Bloqueado. Habilita popups.";
-          return;
-        }
-
-        // Polling para detectar cierre
-        const check = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(check);
-            setTimeout(checkConnection, 1000);
-          }
-        }, 500);
-      });
-
-      try {
-        await wc.enable();
-        const accounts = wc.accounts;
-        if (accounts.length > 0) {
-          wallet = accounts[0];
-          network = type === 'phantom' ? 'Solana' : 'World Chain';
-          provider = wc;
-          showPayment();
-        }
-      } catch (err) {
-        console.log(err);
-        document.getElementById("status").innerText = "Cancelado. Pulsa de nuevo.";
+      let link;
+      if (type === 'phantom') {
+        const redirect = encodeURIComponent(`${window.location.href}?session=${session}&network=solana`);
+        link = `https://phantom.app/ul/browse/${redirect}?ref=star-glitch`;
+      } else {
+        const redirect = encodeURIComponent(`${window.location.href}?session=${session}&network=world`);
+        link = `https://metamask.app.link/dapp/${window.location.host}?redirect=${redirect}`;
       }
-    }
 
-    // === VERIFICAR CONEXIÓN AL REGRESO ===
-    function checkConnection() {
-      const session = localStorage.getItem('connect_session');
-      const type = localStorage.getItem('connect_type');
-      if (!session || !type) return;
+      document.getElementById("status").innerText = `Abriendo ${type === 'phantom' ? 'Phantom' : 'MetaMask'}...`;
+      Telegram.WebApp.openLink(link);
 
-      // Simular conexión (en producción: usar provider real)
-      setTimeout(() => {
-        if (Math.random() > 0.3) { // 70% éxito
-          wallet = type === 'phantom' ? '5FHw...xyz' : '0xd7fa...14bc5';
-          network = type === 'phantom' ? 'Solana' : 'World Chain';
+      // Polling para detectar regreso
+      const check = setInterval(() => {
+        const url = new URL(window.location);
+        const s = url.searchParams.get('session');
+        const n = url.searchParams.get('network');
+        const stored = localStorage.getItem('connect_session');
+
+        if (s && s === stored) {
+          clearInterval(check);
+          url.search = '';
+          history.replaceState({}, '', url);
           localStorage.removeItem('connect_session');
           localStorage.removeItem('connect_type');
+
+          // Simular conexión (en producción: usar window.solana o window.ethereum)
+          if (n === 'solana') {
+            wallet = '5FHwk...xyz';
+            network = 'Solana';
+          } else {
+            wallet = '0xd7fa...14bc5';
+            network = 'World Chain';
+          }
           showPayment();
         }
-      }, 2000);
+      }, 800);
     }
 
     function showPayment() {
       document.getElementById("status").innerText = `${network}: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
       document.getElementById("connectSection").classList.add("hidden");
       document.getElementById("paymentSection").classList.remove("hidden");
+      loadState();
     }
 
-    function payToPlay() {
-      setTimeout(() => {
-        document.getElementById("status").innerText = "¡Pago recibido!";
-        document.getElementById("paymentSection").classList.add("hidden");
-        document.getElementById("gameSection").classList.remove("hidden");
-        startHODL();
-      }, 1500);
+    async function payToPlay() {
+      document.getElementById("status").innerText = "Procesando pago...";
+      const amount = 0.1 * 10**SOLANA_DECIMALS;
+
+      try {
+        if (network === 'Solana') {
+          const connection = new Solana.Connection(SOLANA_RPC, 'confirmed');
+          const from = new Solana.PublicKey(wallet);
+          const to = new Solana.PublicKey(DEV_WALLET_SOLANA);
+          const mint = new Solana.PublicKey(SOLANA_CA);
+
+          const transaction = new Solana.Transaction().add(
+            SplToken.createTransferInstruction(
+              SplToken.TOKEN_PROGRAM_ID,
+              from,
+              to,
+              from,
+              [],
+              amount
+            )
+          );
+
+          // En producción: usar window.solana.signTransaction
+          alert("Transacción lista. Firma en Phantom.");
+        }
+
+        setTimeout(() => {
+          document.getElementById("status").innerText = "¡Pago recibido!";
+          document.getElementById("paymentSection").classList.add("hidden");
+          document.getElementById("gameSection").classList.remove("hidden");
+          startHODL();
+        }, 2000);
+      } catch (err) {
+        document.getElementById("status").innerText = "Error en pago";
+      }
     }
 
     function startHODL() {
@@ -152,9 +166,10 @@
       document.getElementById("hodlText").innerText = "¡HODLEANDO!";
       interval = setInterval(() => {
         streak++;
-        fragments += streak;
+        fragments += streak * (streak > 30 ? 2 : 1);
         document.getElementById("streak").innerText = streak;
         document.getElementById("fragments").innerText = fragments;
+        saveState();
         if (streak % 10 === 0) addTentacle();
       }, 1000);
     }
@@ -163,27 +178,49 @@
       clearInterval(interval);
       document.getElementById("hodlText").innerText = "¡HODLEA AQUÍ!";
       if (streak > 5) alert(`¡${streak}s! Ganaste ${(streak/10).toFixed(1)} $STARG`);
+      saveState();
     }
 
     function cashOut() {
       if (fragments < 100) return alert("100 fragmentos mínimo");
       alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG a ${wallet}`);
+      resetGame();
     }
 
     function addTentacle() {
       const t = document.createElement("div");
-      t.innerText = "🦑"; t.style.position = "absolute"; t.style.fontSize = "3em";
+      t.innerText = "Squid"; t.style.position = "absolute"; t.style.fontSize = "3em";
       t.style.left = Math.random() * 80 + "%"; t.style.top = "-50px";
       t.style.animation = "fall 3s linear"; document.body.appendChild(t);
       setTimeout(() => t.remove(), 3000);
+    }
+
+    function saveState() {
+      localStorage.setItem('fragments', fragments);
+      localStorage.setItem('streak', streak);
+    }
+
+    function loadState() {
+      fragments = parseInt(localStorage.getItem('fragments') || 0);
+      streak = parseInt(localStorage.getItem('streak') || 0);
+      document.getElementById("fragments").innerText = fragments;
+      document.getElementById("streak").innerText = streak;
+    }
+
+    function resetGame() {
+      fragments = 0; streak = 0;
+      document.getElementById("fragments").innerText = 0;
+      document.getElementById("streak").innerText = 0;
+      localStorage.clear();
+      document.getElementById("status").innerText = "Juego reseteado";
     }
 
     const style = document.createElement('style');
     style.innerHTML = `@keyframes fall { from { top: -50px; } to { top: 100vh; } }`;
     document.head.appendChild(style);
 
-    // Verificar conexión al cargar
-    window.addEventListener('load', checkConnection);
+    // Cargar estado al inicio
+    loadState();
   </script>
 </body>
 </html>
