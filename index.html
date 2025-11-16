@@ -4,121 +4,85 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Star Glitch: XYRATH-9</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/web3@1.10.4/dist/web3.min.js"></script>
   <script src="https://unpkg.com/@solana/spl-token@0.4.8/lib/index.iife.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; touch-action: manipulation; }
-    .tentacle { font-size: 5em; animation: pulse 2s infinite; }
+    body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; }
+    .tentacle { font-size: 5em; animation: pulse 2s infinite; margin: 20px 0; }
     @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
-    .container { padding: 20px; }
+    .container { padding: 20px; max-width: 500px; margin: 0 auto; }
     h1 { font-size: 1.8em; margin: 10px 0; }
-    .stats { margin: 15px 0; font-size: 1.2em; }
-    .btn { background: #0f0; color: #000; border: none; padding: 15px 30px; font-size: 1.3em; margin: 10px; border-radius: 10px; cursor: pointer; touch-action: manipulation; }
-    .hodl-area { width: 100vw; height: 50vh; background: rgba(0,255,0,0.1); display: flex; align-items: center; justify-content: center; font-size: 2em; margin: 20px 0; }
+    .stats { margin: 15px 0; font-size: 1.2em; line-height: 1.6; }
+    .btn { background: #0f0; color: #000; border: none; padding: 15px 30px; font-size: 1.3em; margin: 10px; border-radius: 10px; cursor: pointer; width: 90%; }
+    .hodl-area { width: 100%; height: 50vh; background: rgba(0,255,0,0.1); display: flex; align-items: center; justify-content: center; font-size: 2em; margin: 20px 0; border: 2px solid #0f0; border-radius: 12px; }
     .jackpot { color: #ff0; font-weight: bold; }
     .hidden { display: none; }
+    #status { margin: 10px 0; font-size: 1em; min-height: 24px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="tentacle">🦑</div>
     <h1>STAR GLITCH: XYRATH-9</h1>
-    <p id="status">Conecta tu wallet para jugar</p>
+    <p id="status">Conecta tu wallet</p>
 
     <div id="connectSection">
-      <button class="btn" id="phantomBtn">CONECTAR PHANTOM (Solana)</button>
-      <button class="btn" id="metamaskBtn">CONECTAR METAMASK (World Chain)</button>
+      <button class="btn" id="phantomBtn">PHANTOM (Solana)</button>
+      <button class="btn" id="metamaskBtn">METAMASK (World Chain)</button>
     </div>
 
     <div id="paymentSection" class="hidden">
-      <button class="btn" id="payBtn">PAGAR 0.1 $STARG PARA JUGAR</button>
+      <button class="btn" id="payBtn">PAGAR 0.1 $STARG</button>
     </div>
 
     <div id="gameSection" class="hidden">
       <div class="stats">
-        💰 Fragmentos: <span id="fragments">0</span><br>
-        ⏱️ HODL Streak: <span id="streak">0</span>s<br>
-        🏆 Jackpot: <span class="jackpot">100 $STARG</span>
+        Fragmentos: <span id="fragments">0</span><br>
+        Streak: <span id="streak">0</span>s<br>
+        Jackpot: <span class="jackpot">100 $STARG</span>
       </div>
-
-      <div class="hodl-area" id="hodlArea">
-        <div id="hodlText">¡HODLEA AQUÍ!</div>
-      </div>
-
-      <button class="btn" id="cashOutBtn">COBRAR $STARG</button>
-      <button class="btn" id="resetBtn">RESET JUEGO</button>
+      <div class="hodl-area" id="hodlArea"><div id="hodlText">¡HODLEA!</div></div>
+      <button class="btn" id="cashoutBtn">COBRAR</button>
+      <button class="btn" id="resetBtn">RESET</button>
     </div>
   </div>
 
   <script>
-    Telegram.WebApp.ready();
-    Telegram.WebApp.expand();
-
     const DEV_WALLET_SOLANA = '5ryaXDPvu1TkDWztTnqwq17fcj6AVVtw3bcrc1g1te6T';
     const DEV_WALLET_WORLD = '0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5';
-    const SOLANA_CA = '3nhJUCbLwoT7w1iUWE1MUER1YbUmqJxeqBVpsBZFpump'; // Nuevo Pump.fun
+    const SOLANA_CA = '3nhJUCbLwoT7w1iUWE1MUER1YbUmqJxeqBVpsBZFpump';
     const WORLD_CA = '0xa3Ad51ebd02690317b34f83329F082F9b4f84683';
     const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
-    const WORLD_RPC = 'https://worldchain-mainnet.g.alchemy.com/public';
-    const SOLANA_DECIMALS = 6; // Ajusta si es diferente
-    const WORLD_DECIMALS = 18; // ERC20 estándar
+    const SOLANA_DECIMALS = 6;
+    const WORLD_DECIMALS = 18;
 
     let provider, wallet, network, fragments = 0, streak = 0, interval;
 
-    document.getElementById("phantomBtn").addEventListener("click", connectSolana);
-    async function connectSolana() {
-      document.getElementById("status").innerText = "Abriendo Phantom...";
+    // === CONECTAR PHANTOM ===
+    document.getElementById("phantomBtn").addEventListener("click", async () => {
+      if (!window.solana?.isPhantom) return alert("Phantom no detectado. Instálalo.");
+      try {
+        const resp = await window.solana.connect({ onlyIfTrusted: false });
+        wallet = resp.publicKey.toString();
+        network = "Solana";
+        provider = window.solana;
+        showPayment();
+      } catch (e) { alert("Conexión cancelada"); }
+    });
 
-      const callback = encodeURIComponent(window.location.href + "?solana=connected");
-
-      const phantomLink = `https://phantom.app/ul/v1/connect?app_url=${encodeURIComponent(window.location.origin)}&redirect_link=${callback}&dapp_encryption_public_key=${Date.now().toString(36)}&cluster=mainnet-beta`;
-
-      Telegram.WebApp.openLink(phantomLink);
-
-      const check = setInterval(async () => {
-        if (window.solana && window.solana.isPhantom) {
-          try {
-            const response = await window.solana.connect();
-            wallet = response.publicKey.toString();
-            network = "Solana";
-            provider = window.solana;
-            clearInterval(check);
-            showPayment();
-          } catch (err) {
-            console.log("Error Phantom: " + err.message);
-          }
-        }
-      }, 500);
-    }
-
-    document.getElementById("metamaskBtn").addEventListener("click", connectWorld);
-    async function connectWorld() {
-      document.getElementById("status").innerText = "Abriendo MetaMask...";
-
-      const callback = encodeURIComponent(window.location.href + "?world=connected");
-
-      const mmLink = `https://metamask.app.link/dapp/${window.location.host}?redirect_link=${callback}`;
-
-      Telegram.WebApp.openLink(mmLink);
-
-      const check = setInterval(async () => {
-        if (window.ethereum) {
-          try {
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
-            wallet = window.ethereum.selectedAddress;
-            network = "World Chain";
-            provider = window.ethereum;
-            clearInterval(check);
-            showPayment();
-          } catch (err) {
-            console.log("Error MetaMask: " + err.message);
-          }
-        }
-      }, 500);
-    }
+    // === CONECTAR METAMASK ===
+    document.getElementById("metamaskBtn").addEventListener("click", async () => {
+      if (!window.ethereum) return alert("MetaMask no detectado. Instálalo.");
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        wallet = accounts[0];
+        network = "World Chain";
+        provider = window.ethereum;
+        showPayment();
+      } catch (e) { alert("Conexión cancelada"); }
+    });
 
     function showPayment() {
       document.getElementById("status").innerText = `${network}: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
@@ -127,64 +91,55 @@
       loadState();
     }
 
-    document.getElementById("payBtn").addEventListener("click", payToPlay);
-    async function payToPlay() {
+    // === PAGO ===
+    document.getElementById("payBtn").addEventListener("click", async () => {
       document.getElementById("status").innerText = "Procesando pago...";
-
       const amount = 0.1 * 10 ** (network === "Solana" ? SOLANA_DECIMALS : WORLD_DECIMALS);
 
       try {
         if (network === "Solana") {
           const connection = new Solana.Connection(SOLANA_RPC, 'confirmed');
-          const from = new Solana.PublicKey(wallet);
-          const to = new Solana.PublicKey(DEV_WALLET_SOLANA);
-          const mint = new Solana.PublicKey(SOLANA_CA);
-
-          const transaction = new Solana.Transaction().add(
+          const tx = new Solana.Transaction().add(
             SplToken.createTransferInstruction(
               SplToken.TOKEN_PROGRAM_ID,
-              from,
-              to,
-              from,
+              new Solana.PublicKey(wallet),
+              new Solana.PublicKey(DEV_WALLET_SOLANA),
+              new Solana.PublicKey(wallet),
               [],
               amount
             )
           );
-
-          const signature = await provider.signTransaction(transaction);
-          const txId = await connection.sendRawTransaction(transaction.serialize());
-          await connection.confirmTransaction(txId);
-        } else if (network === "World Chain") {
+          const { signature } = await provider.signAndSendTransaction(tx);
+          await connection.confirmTransaction(signature);
+        } else {
           const web3 = new Web3(provider);
-          const token = new web3.eth.Contract([{"name":"transfer","inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"outputs":[{"name":"","type":"bool"}],"type":"function"} ], WORLD_CA);
-
+          const token = new web3.eth.Contract([{"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"}], WORLD_CA);
           await token.methods.transfer(DEV_WALLET_WORLD, amount).send({ from: wallet });
         }
-
-        document.getElementById("status").innerText = "¡Pago exitoso!";
+        document.getElementById("status").innerText = "¡Pago recibido!";
         document.getElementById("paymentSection").classList.add("hidden");
         document.getElementById("gameSection").classList.remove("hidden");
         startHODL();
       } catch (err) {
-        console.log("Error pago: " + err.message);
-        document.getElementById("status").innerText = "Pago cancelado o error. Intenta de nuevo.";
+        document.getElementById("status").innerText = "Error: " + (err.message || "Cancelado");
       }
-    }
+    });
 
+    // === JUEGO ===
     function startHODL() {
       const area = document.getElementById("hodlArea");
-      area.addEventListener("touchstart", startStreak);
       area.addEventListener("mousedown", startStreak);
-      area.addEventListener("touchend", endStreak);
+      area.addEventListener("touchstart", e => { e.preventDefault(); startStreak(); });
       area.addEventListener("mouseup", endStreak);
+      area.addEventListener("touchend", endStreak);
     }
 
     function startStreak() {
       streak = 0;
-      document.getElementById("hodlText").innerText = "¡HODLEANDO!";
+      document.getElementById("hodlText").innerText = "HODLEANDO!";
       interval = setInterval(() => {
         streak++;
-        fragments += streak * (streak > 30 ? 2 : 1); // Staking x2
+        fragments += streak * (streak > 30 ? 2 : 1);
         document.getElementById("streak").innerText = streak;
         document.getElementById("fragments").innerText = fragments;
         saveState();
@@ -194,52 +149,25 @@
 
     function endStreak() {
       clearInterval(interval);
-      document.getElementById("hodlText").innerText = "¡HODLEA AQUÍ!";
-      if (streak > 5) alert(`¡${streak}s! Ganaste ${(streak/10).toFixed(1)} $STARG`);
+      document.getElementById("hodlText").innerText = "¡HODLEA!";
+      if (streak > 5) alert(`${streak}s! +${(streak/10).toFixed(1)} $STARG`);
       saveState();
     }
 
-    async function cashOut() {
-      if (fragments < 100) return alert("100 fragmentos mínimo");
+    document.getElementById("cashoutBtn").addEventListener("click", () => {
+      if (fragments < 100) return alert("Mínimo 100 fragmentos");
+      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG`);
+      resetGame();
+    });
 
-      const amount = (fragments / 1000).toFixed(3) * 10** (network === "Solana" ? SOLANA_DECIMALS : WORLD_DECIMALS);
+    document.getElementById("resetBtn").addEventListener("click", resetGame);
 
-      try {
-        document.getElementById("status").innerText = "Cobrando...";
-
-        if (network === "Solana") {
-          const connection = new Solana.Connection(SOLANA_RPC, 'confirmed');
-          const from = new Solana.PublicKey(DEV_WALLET_SOLANA);
-          const to = new Solana.PublicKey(wallet);
-          const mint = new Solana.PublicKey(SOLANA_CA);
-
-          const transaction = new Solana.Transaction().add(
-            SplToken.createTransferInstruction(
-              SplToken.TOKEN_PROGRAM_ID,
-              from,
-              to,
-              from,
-              [],
-              amount
-            )
-          );
-
-          const signature = await provider.signTransaction(transaction);
-          const txId = await connection.sendRawTransaction(transaction.serialize());
-          await connection.confirmTransaction(txId);
-        } else if (network === "World Chain") {
-          const web3 = new Web3(provider);
-          const token = new web3.eth.Contract([{"name":"transfer","inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"outputs":[{"name":"","type":"bool"}],"type":"function"} ], WORLD_CA);
-
-          await token.methods.transfer(wallet, amount).send({ from: DEV_WALLET_WORLD });
-        }
-
-        document.getElementById("status").innerText = "Cobro exitoso";
-        resetGame();
-      } catch (err) {
-        console.log("Error cobro: " + err.message);
-        document.getElementById("status").innerText = "Error en cobro. Intenta de nuevo.";
-      }
+    function resetGame() {
+      fragments = 0; streak = 0;
+      document.getElementById("fragments").innerText = 0;
+      document.getElementById("streak").innerText = 0;
+      localStorage.clear();
+      document.getElementById("status").innerText = "Juego reseteado";
     }
 
     function addTentacle() {
@@ -262,18 +190,11 @@
       document.getElementById("streak").innerText = streak;
     }
 
-    function resetGame() {
-      fragments = 0;
-      streak = 0;
-      document.getElementById("fragments").innerText = 0;
-      document.getElementById("streak").innerText = 0;
-      localStorage.clear();
-      document.getElementById("status").innerText = "Juego reseteado";
-    }
-
     const style = document.createElement('style');
     style.innerHTML = `@keyframes fall { from { top: -50px; } to { top: 100vh; } }`;
     document.head.appendChild(style);
+
+    loadState();
   </script>
 </body>
 </html>
