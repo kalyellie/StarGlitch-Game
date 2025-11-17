@@ -16,17 +16,12 @@
       font-family: 'Orbitron', monospace; 
       text-align: center; 
       overflow-x: hidden;
-      animation: cosmicPulse 12s infinite;
       min-height: 100vh;
     }
-    @keyframes cosmicPulse { 0%,100% { filter: hue-rotate(0deg); } 50% { filter: hue-rotate(150deg); } }
-    
     .tentacle-core { font-size: 5em; animation: pulse 1.5s infinite; text-shadow: 0 0 25px #0f0; margin: 15px 0; }
     @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.35); } }
-    
     h1 { font-size: 1.6em; margin: 10px; letter-spacing: 3px; text-shadow: 0 0 15px #0f0; }
     .lore { font-size: 0.9em; margin: 14px; opacity: 0.85; line-height: 1.5; }
-    
     .btn { 
       background: linear-gradient(45deg, #0f0, #00f); 
       color: #000; 
@@ -45,13 +40,11 @@
     }
     .btn:hover { transform: scale(1.05); box-shadow: 0 0 35px #0f0; }
     .btn:active { transform: scale(0.94); }
-    
     .hodl-area { 
       width: 100%; height: 45vh; background: rgba(0,255,0,0.06); 
       border: 3px dashed #0f0; border-radius: 18px; 
       display: flex; align-items: center; justify-content: center; 
       font-size: 1.9em; margin: 18px 0; position: relative; overflow: hidden;
-      box-shadow: inset 0 0 30px rgba(0,255,0,0.2);
     }
     .hodl-area::after { 
       content: '🦑🦑🦑🦑🦑'; 
@@ -59,21 +52,10 @@
       animation: swim 9s linear infinite;
     }
     @keyframes swim { from { transform: translateX(-100%); } to { transform: translateX(120%); } }
-    
     .stats { margin: 16px 0; font-size: 1.1em; line-height: 1.7; }
     .jackpot { color: #ff0; font-weight: bold; text-shadow: 0 0 12px #ff0; }
     .hidden { display: none !important; }
     #status { margin: 12px; font-size: 1em; min-height: 24px; color: #0f0; }
-
-    .enemy { 
-      position: absolute; 
-      font-size: 2.3em; 
-      color: #f00; 
-      text-shadow: 0 0 15px #f00; 
-      animation: fall 4s linear; 
-      pointer-events: none;
-    }
-    @keyframes fall { from { top: -80px; } to { top: 100vh; } }
   </style>
 </head>
 <body>
@@ -83,7 +65,7 @@
     En las profundidades de <strong>Xyrath-9</strong>, <em>Kieran Star</em> halló la moneda rota.<br>
     Los <strong>Tentáculos Caóticos</strong> acechan. ¡HODL o perece!
   </p>
-  <p id="status">Conecta tu wallet (FULL NAVEGADOR)</p>
+  <p id="status">Conecta tu wallet (MÓVIL PERÚ)</p>
 
   <div id="connectSection">
     <button class="btn" id="phantomBtn">PHANTOM • SOLANA</button>
@@ -109,43 +91,39 @@
   <script>
     const DEV_WALLET_SOLANA = 'Ccp1SJut7ycZbAFNtYjmmGcGUgx7Gipji4R5BvfqfaQS';
     const DEV_WALLET_WORLD = '0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5';
-    const SOLANA_CA = '3nhJUCbLwoT7w1iUWE1MUER1YbUmqJxeqBVpsBZFpump';
-    const WORLD_CA = '0xa3Ad51ebd02690317b34f83329F2f9b4f84683';
-    const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
-    const SOLANA_DECIMALS = 6;
-    const WORLD_DECIMALS = 18;
-
     const VIP_WALLETS = [DEV_WALLET_SOLANA, DEV_WALLET_WORLD.toLowerCase()];
     let provider, wallet, network, fragments = 0, streak = 0, interval, isHodling = false, enemyInterval;
     const HAS_PLAYED_KEY = 'hasPlayedBefore';
     let connectRequested = false;
 
-    // === PHANTOM EN FULL NAVEGADOR MÓVIL (PERÚ) ===
+    // === PHANTOM UNIVERSAL LINK (SOLUCIÓN PERÚ MÓVIL) ===
     document.getElementById("phantomBtn").addEventListener("click", () => {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
       if (window.solana?.isPhantom) {
-        connectPhantomNow();
+        connectPhantom();
         return;
       }
 
-      if (isMobile) {
-        connectRequested = true;
-        document.getElementById("status").innerText = "Abriendo Phantom... Pulsa CONECTAR en la app";
-
-        // DEEP LINK OFICIAL PARA NAVEGADOR MÓVIL
-        const dappUrl = encodeURIComponent(window.location.href);
-        const phantomDeepLink = `phantom://browse?dappUrl=${dappUrl}&cluster=mainnet-beta`;
-        window.location.href = phantomDeepLink;
-
-        // POLLING + LISTENER
-        startPhantomPolling();
-      } else {
+      if (!isMobile) {
         alert("Phantom no detectado. Instálalo desde phantom.app");
+        return;
       }
+
+      connectRequested = true;
+      document.getElementById("status").innerText = "Abriendo Phantom... Pulsa CONECTAR";
+
+      const currentUrl = encodeURIComponent(window.location.href);
+      const redirectLink = encodeURIComponent(window.location.href);
+      const phantomLink = `https://phantom.app/ul/v1/connect?app_url=${currentUrl}&redirect_link=${redirectLink}&cluster=mainnet-beta`;
+
+      window.location.href = phantomLink;
+
+      // POLLING + FOCUS + VISIBILITY
+      startConnectPolling();
     });
 
-    function connectPhantomNow() {
+    function connectPhantom() {
       if (!window.solana?.isPhantom) return;
       window.solana.connect({ onlyIfTrusted: false })
         .then(resp => {
@@ -154,33 +132,33 @@
           provider = window.solana;
           showEntry();
         })
-        .catch(err => {
-          console.error(err);
-          alert("Conexión rechazada. Intenta de nuevo.");
-        });
+        .catch(() => alert("Conexión cancelada"));
     }
 
-    function startPhantomPolling() {
+    function startConnectPolling() {
+      const events = ['focus', 'visibilitychange', 'pageshow'];
+      events.forEach(ev => window.addEventListener(ev, tryConnect));
+
       const poll = setInterval(() => {
         if (window.solana?.isPhantom && connectRequested && !wallet) {
-          connectPhantomNow();
+          tryConnect();
         }
-      }, 700);
+      }, 600);
 
       setTimeout(() => {
         clearInterval(poll);
+        events.forEach(ev => window.removeEventListener(ev, tryConnect));
         if (!wallet) {
-          document.getElementById("status").innerText = "No se conectó. Pulsa PHANTOM de nuevo.";
+          document.getElementById("status").innerText = "No conectado. Pulsa PHANTOM de nuevo.";
         }
-      }, 35000);
+      }, 40000);
     }
 
-    // === AL REGRESAR AL NAVEGADOR ===
-    window.addEventListener("focus", () => {
-      if (connectRequested && window.solana?.isPhantom && !wallet) {
-        setTimeout(connectPhantomNow, 1000);
+    function tryConnect() {
+      if (window.solana?.isPhantom && connectRequested && !wallet) {
+        connectPhantom();
       }
-    });
+    }
 
     // === METAMASK ===
     document.getElementById("metamaskBtn").addEventListener("click", async () => {
@@ -197,7 +175,7 @@
       }
     });
 
-    // === RESTO DEL JUEGO ===
+    // === JUEGO (RESUMIDO) ===
     function showEntry() {
       document.getElementById("status").innerText = `HODLer: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
       document.getElementById("connectSection").classList.add("hidden");
@@ -208,15 +186,12 @@
     document.getElementById("freeEntryBtn").addEventListener("click", () => {
       const isVIP = VIP_WALLETS.includes(wallet);
       const hasPlayed = localStorage.getItem(HAS_PLAYED_KEY);
-      if (!isVIP && hasPlayed) {
-        alert("Ya usaste tu entrada gratuita. Paga 0.1 $STARG.");
-        return;
-      }
+      if (!isVIP && hasPlayed) return alert("Ya usaste tu entrada gratuita.");
       if (!isVIP) localStorage.setItem(HAS_PLAYED_KEY, 'true');
       startGame();
     });
 
-    // ... (pago, juego, HODL, enemigos, cobrar, reset, save/load) igual que antes ...
+    // ... (pago, HODL, enemigos, cobrar, reset, save/load igual que antes) ...
 
     document.getElementById("cashoutBtn").addEventListener("click", () => {
       if (fragments < 100) return alert("Mínimo 100 fragmentos");
@@ -226,8 +201,6 @@
       alert("Solicitud enviada a @GoditsDimensional");
       resetGame();
     });
-
-    // (resto del código del juego igual, sin cambios)
 
     loadState();
   </script>
