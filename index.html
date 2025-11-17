@@ -118,68 +118,60 @@
     const VIP_WALLETS = [DEV_WALLET_SOLANA, DEV_WALLET_WORLD.toLowerCase()];
     let provider, wallet, network, fragments = 0, streak = 0, interval, isHodling = false, enemyInterval;
     const HAS_PLAYED_KEY = 'hasPlayedBefore';
-    let pollInterval = null;
 
-    // === PHANTOM: MÓVIL + PC (DEEP LINK + POLLING + LISTENER) ===
-    document.getElementById("phantomBtn").addEventListener("click", async () => {
+    // === PHANTOM: MÓVIL + PC (SOLUCIÓN DEFINITIVA) ===
+    let phantomConnectRequested = false;
+
+    document.getElementById("phantomBtn").addEventListener("click", () => {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
       if (window.solana?.isPhantom) {
-        try {
-          const resp = await window.solana.connect();
-          wallet = resp.publicKey.toString();
-          network = "Solana";
-          provider = window.solana;
-          showEntry();
-        } catch (e) { alert("Conexión cancelada"); }
+        connectPhantom();
         return;
       }
 
       if (isMobile) {
-        // DEEP LINK OFICIAL PHANTOM
+        phantomConnectRequested = true;
         const dappUrl = encodeURIComponent(window.location.href);
-        const deepLink = `phantom://browse?uri=${dappUrl}&cluster=mainnet-beta`;
-        window.location.href = deepLink;
+        const phantomLink = `https://phantom.app/ul/browse?uri=${dappUrl}&cluster=mainnet-beta`;
+        window.location.href = phantomLink;
 
-        // POLLING AGRESIVO
-        startPhantomPolling();
+        document.getElementById("status").innerText = "Abriendo Phantom... Pulsa CONECTAR";
       } else {
         alert("Phantom no detectado. Instálalo desde phantom.app");
       }
     });
 
-    function startPhantomPolling() {
-      if (pollInterval) return;
-      document.getElementById("status").innerText = "Conectando con Phantom...";
-      
-      pollInterval = setInterval(async () => {
-        if (window.solana?.isPhantom) {
-          try {
-            const resp = await window.solana.connect();
-            clearInterval(pollInterval);
-            pollInterval = null;
-            wallet = resp.publicKey.toString();
-            network = "Solana";
-            provider = window.solana;
-            showEntry();
-          } catch (e) {
-            console.log("Connect rejected, retrying...");
-          }
-        }
-      }, 600);
-
-      setTimeout(() => {
-        if (pollInterval) {
-          clearInterval(pollInterval);
-          pollInterval = null;
-          document.getElementById("status").innerText = "Tiempo agotado. Intenta de nuevo.";
-        }
-      }, 45000);
+    // === CONECTAR PHANTOM (PC + MÓVIL) ===
+    async function connectPhantom() {
+      if (!window.solana?.isPhantom) return;
+      try {
+        const resp = await window.solana.connect();
+        wallet = resp.publicKey.toString();
+        network = "Solana";
+        provider = window.solana;
+        showEntry();
+      } catch (e) {
+        alert("Conexión cancelada");
+      }
     }
 
-    // === METAMASK MÓVIL ===
+    // === DETECTAR REGRESO DE PHANTOM (MÓVIL) ===
+    window.addEventListener("load", () => {
+      if (phantomConnectRequested && window.solana?.isPhantom) {
+        connectPhantom();
+      }
+    });
+
+    // === POLLING EXTRA (SI FALLA EL EVENTO) ===
+    setInterval(() => {
+      if (phantomConnectRequested && window.solana?.isPhantom && !wallet) {
+        connectPhantom();
+      }
+    }, 1000);
+
+    // === METAMASK ===
     document.getElementById("metamaskBtn").addEventListener("click", async () => {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       if (window.ethereum) {
         try {
           const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
@@ -188,14 +180,12 @@
           provider = window.ethereum;
           showEntry();
         } catch (e) { alert("Conexión cancelada"); }
-      } else if (isMobile) {
-        window.location.href = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`;
       } else {
-        alert("MetaMask no detectado. Instálalo desde metamask.io");
+        alert("MetaMask no detectado");
       }
     });
 
-    // === RESTO DEL JUEGO (igual) ===
+    // === RESTO DEL JUEGO ===
     function showEntry() {
       document.getElementById("status").innerText = `HODLer: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
       document.getElementById("connectSection").classList.add("hidden");
@@ -309,16 +299,12 @@
       setTimeout(() => t.remove(), 3000);
     }
 
-    // === COBRAR (PERFECTO) ===
+    // === COBRAR ===
     document.getElementById("cashoutBtn").addEventListener("click", () => {
-      if (fragments < 100) return alert("Mínimo 100 fragmentos para cobrar");
+      if (fragments < 100) return alert("Mínimo 100 fragmentos");
       const amount = (fragments / 1000).toFixed(3);
       const message = encodeURIComponent(
-        `🦑 RETIRO $STARG 🦑\n\n` +
-        `Cantidad: ${amount} $STARG\n` +
-        `Red: ${network}\n` +
-        `Wallet: ${wallet}\n\n` +
-        `¡HODL ETERNO!`
+        `🦑 RETIRO $STARG 🦑\n\nCantidad: ${amount} $STARG\nRed: ${network}\nWallet: ${wallet}\n\n¡HODL ETERNO!`
       );
       window.open(`https://t.me/GoditsDimensional?text=${message}`, '_blank');
       alert("Solicitud enviada a @GoditsDimensional");
