@@ -54,7 +54,7 @@
       box-shadow: inset 0 0 30px rgba(0,255,0,0.2);
     }
     .hodl-area::after { 
-      content: 'SQUID SQUID SQUID SQUID SQUID'; 
+      content: '🦑🦑🦑🦑🦑'; 
       position: absolute; bottom: 10px; font-size: 1.4em; opacity: 0.3; 
       animation: swim 9s linear infinite;
     }
@@ -77,7 +77,7 @@
   </style>
 </head>
 <body>
-  <div class="tentacle-core">SQUID</div>
+  <div class="tentacle-core">🦑</div>
   <h1>STAR GLITCH: XYRATH-9</h1>
   <p class="lore">
     En las profundidades de <strong>Xyrath-9</strong>, <em>Kieran Star</em> halló la moneda rota.<br>
@@ -107,7 +107,7 @@
   </div>
 
   <script>
-    const DEV_WALLET_SOLANA = 'Ccp1SJut7ycZbAFNtYjmmGcGUgx7Gipji4R5BvfqfaQS';
+    const DEV_WALLET_SOLANA = '5ryaXDPvu1TkDWztTnqwq17fcj6AVVtw3bcrc1g1te6T';
     const DEV_WALLET_WORLD = '0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5';
     const SOLANA_CA = '3nhJUCbLwoT7w1iUWE1MUER1YbUmqJxeqBVpsBZFpump';
     const WORLD_CA = '0xa3Ad51ebd02690317b34f83329F2f9b4f84683';
@@ -118,13 +118,15 @@
     const VIP_WALLETS = [DEV_WALLET_SOLANA, DEV_WALLET_WORLD.toLowerCase()];
     let provider, wallet, network, fragments = 0, streak = 0, interval, isHodling = false, enemyInterval;
     const HAS_PLAYED_KEY = 'hasPlayedBefore';
-    let isPolling = false;
+    let pollInterval = null;
 
-    // === PHANTOM EN MÓVIL (CON POLLING) ===
+    // === PHANTOM: MÓVIL + PC (DEEP LINK + POLLING + LISTENER) ===
     document.getElementById("phantomBtn").addEventListener("click", async () => {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
       if (window.solana?.isPhantom) {
         try {
-          const resp = await window.solana.connect({ onlyIfTrusted: false });
+          const resp = await window.solana.connect();
           wallet = resp.publicKey.toString();
           network = "Solana";
           provider = window.solana;
@@ -133,34 +135,51 @@
         return;
       }
 
-      // MÓVIL: abrir Phantom
-      const dappUrl = encodeURIComponent(window.location.href);
-      window.location.href = `https://phantom.app/ul/browse?dappUrl=${dappUrl}&cluster=mainnet-beta`;
+      if (isMobile) {
+        // DEEP LINK OFICIAL PHANTOM
+        const dappUrl = encodeURIComponent(window.location.href);
+        const deepLink = `phantom://browse?uri=${dappUrl}&cluster=mainnet-beta`;
+        window.location.href = deepLink;
 
-      // Polling al regreso
-      if (isPolling) return;
-      isPolling = true;
-      document.getElementById("status").innerText = "Esperando conexión...";
-      const poll = setInterval(() => {
+        // POLLING AGRESIVO
+        startPhantomPolling();
+      } else {
+        alert("Phantom no detectado. Instálalo desde phantom.app");
+      }
+    });
+
+    function startPhantomPolling() {
+      if (pollInterval) return;
+      document.getElementById("status").innerText = "Conectando con Phantom...";
+      
+      pollInterval = setInterval(async () => {
         if (window.solana?.isPhantom) {
-          clearInterval(poll);
-          isPolling = false;
-          window.solana.connect({ onlyIfTrusted: false }).then(resp => {
+          try {
+            const resp = await window.solana.connect();
+            clearInterval(pollInterval);
+            pollInterval = null;
             wallet = resp.publicKey.toString();
             network = "Solana";
             provider = window.solana;
             showEntry();
-          }).catch(() => {
-            document.getElementById("status").innerText = "Conexión cancelada.";
-            isPolling = false;
-          });
+          } catch (e) {
+            console.log("Connect rejected, retrying...");
+          }
         }
-      }, 800);
-      setTimeout(() => { clearInterval(poll); isPolling = false; }, 30000);
-    });
+      }, 600);
 
-    // === METAMASK EN MÓVIL ===
+      setTimeout(() => {
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+          document.getElementById("status").innerText = "Tiempo agotado. Intenta de nuevo.";
+        }
+      }, 45000);
+    }
+
+    // === METAMASK MÓVIL ===
     document.getElementById("metamaskBtn").addEventListener("click", async () => {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       if (window.ethereum) {
         try {
           const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
@@ -169,12 +188,14 @@
           provider = window.ethereum;
           showEntry();
         } catch (e) { alert("Conexión cancelada"); }
-        return;
+      } else if (isMobile) {
+        window.location.href = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`;
+      } else {
+        alert("MetaMask no detectado. Instálalo desde metamask.io");
       }
-
-      window.location.href = `https://metamask.app.link/dapp/${window.location.host}`;
     });
 
+    // === RESTO DEL JUEGO (igual) ===
     function showEntry() {
       document.getElementById("status").innerText = `HODLer: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
       document.getElementById("connectSection").classList.add("hidden");
@@ -272,7 +293,7 @@
     function spawnEnemy() {
       const e = document.createElement("div");
       e.className = "enemy";
-      e.innerText = "SQUID";
+      e.innerText = "🦑";
       e.style.left = Math.random() * 80 + "%";
       document.body.appendChild(e);
       setTimeout(() => e.remove(), 4000);
@@ -280,7 +301,7 @@
 
     function spawnFriendlyTentacle() {
       const t = document.createElement("div");
-      t.innerText = "SQUID";
+      t.innerText = "🦑";
       t.style.position = "absolute"; t.style.fontSize = "2.8em"; t.style.color = "#0f0";
       t.style.left = Math.random() * 80 + "%"; t.style.top = "-60px";
       t.style.animation = "fall 3s linear"; t.style.textShadow = "0 0 15px #0f0";
@@ -288,12 +309,12 @@
       setTimeout(() => t.remove(), 3000);
     }
 
-    // === BOTÓN DE COBRAR (SIEMPRE VISIBLE) ===
+    // === COBRAR (PERFECTO) ===
     document.getElementById("cashoutBtn").addEventListener("click", () => {
       if (fragments < 100) return alert("Mínimo 100 fragmentos para cobrar");
       const amount = (fragments / 1000).toFixed(3);
       const message = encodeURIComponent(
-        `SQUID RETIRO $STARG SQUID\n\n` +
+        `🦑 RETIRO $STARG 🦑\n\n` +
         `Cantidad: ${amount} $STARG\n` +
         `Red: ${network}\n` +
         `Wallet: ${wallet}\n\n` +
