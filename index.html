@@ -52,7 +52,7 @@
       box-shadow: inset 0 0 30px rgba(0,255,0,0.2);
     }
     .hodl-area::after { 
-      content: 'SQUID SQUID SQUID SQUID SQUID'; 
+      content: '🦑🦑🦑🦑🦑'; 
       position: absolute; bottom: 12px; font-size: 1.6em; opacity: 0.3; 
       animation: swim 9s linear infinite;
     }
@@ -75,7 +75,7 @@
   </style>
 </head>
 <body>
-  <div class="tentacle-core">SQUID</div>
+  <div class="tentacle-core">🦑</div>
   <h1>STAR GLITCH: XYRATH-9</h1>
   <p class="lore">
     En las profundidades de <strong>Xyrath-9</strong>, <em>Kieran Star</em> halló la moneda rota.<br>
@@ -89,7 +89,7 @@
   </div>
 
   <div id="entrySection" class="hidden">
-    <button class="btn" id="freeEntryBtn">ENTRADA GRATUITA (1ª VEZ)</button>
+    <button class="btn" id="freeEntryBtn">ENTRADA GRATUITA</button>
     <button class="btn" id="payEntryBtn">PAGAR 0.1 $STARG</button>
   </div>
 
@@ -113,6 +113,12 @@
     const SOLANA_DECIMALS = 6;
     const WORLD_DECIMALS = 18;
 
+    // === TUS WALLETS (ENTRADA GRATIS ILIMITADA) ===
+    const VIP_WALLETS = [
+      'Ccp1SJut7ycZbAFNtYjmmGcGUgx7Gipji4R5BvfqfaQS', // Solana (tuya)
+      '0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5'  // World Chain (tuya)
+    ];
+
     let provider, wallet, network, fragments = 0, streak = 0, interval, isHodling = false, enemyInterval;
     const HAS_PLAYED_KEY = 'hasPlayedBefore';
 
@@ -129,7 +135,7 @@
     });
 
     document.getElementById("metamaskBtn").addEventListener("click", async () => {
-      if (!window.ethereum) return alert("MetaMask no detectado. Instál  metamask.io");
+      if (!window.ethereum) return alert("MetaMask no detectado. Instálalo desde metamask.io");
       try {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         wallet = accounts[0];
@@ -146,16 +152,24 @@
       loadState();
     }
 
-    // === ENTRADA ===
+    // === ENTRADA GRATUITA (ILIMITADA PARA TI) ===
     document.getElementById("freeEntryBtn").addEventListener("click", () => {
-      if (localStorage.getItem(HAS_PLAYED_KEY)) {
-        alert("Ya usaste tu entrada gratuita. Paga 0.1 $STARG.");
+      const isVIP = VIP_WALLETS.includes(wallet);
+      const hasPlayed = localStorage.getItem(HAS_PLAYED_KEY);
+
+      if (!isVIP && hasPlayed) {
+        alert("Ya usaste tu entrada gratuita. Paga 0.1 $STARG para volver.");
         return;
       }
-      localStorage.setItem(HAS_PLAYED_KEY, 'true');
+
+      if (!isVIP) {
+        localStorage.setItem(HAS_PLAYED_KEY, 'true');
+      }
+
       startGame();
     });
 
+    // === ENTRADA PAGADA ===
     document.getElementById("payEntryBtn").addEventListener("click", async () => {
       document.getElementById("status").innerText = "Sacrificando...";
       const amount = 0.1 * 10 ** (network === "Solana" ? SOLANA_DECIMALS : WORLD_DECIMALS);
@@ -191,7 +205,7 @@
       startEnemies();
     }
 
-    // === HODL ===
+    // === HODL + ENEMIGOS + RETIRO (igual que antes) ===
     function startHODL() {
       const area = document.getElementById("hodlArea");
       area.addEventListener("mousedown", () => { isHodling = true; startStreak(); });
@@ -221,7 +235,6 @@
       saveState();
     }
 
-    // === ENEMIGOS ===
     function startEnemies() {
       enemyInterval = setInterval(() => {
         if (!isHodling && fragments > 0) {
@@ -237,7 +250,7 @@
     function spawnEnemy() {
       const e = document.createElement("div");
       e.className = "enemy";
-      e.innerText = "SQUID";
+      e.innerText = "🦑";
       e.style.left = Math.random() * 80 + "%";
       document.body.appendChild(e);
       setTimeout(() => e.remove(), 4000);
@@ -245,7 +258,7 @@
 
     function spawnFriendlyTentacle() {
       const t = document.createElement("div");
-      t.innerText = "SQUID";
+      t.innerText = "🦑";
       t.style.position = "absolute"; t.style.fontSize = "3em"; t.style.color = "#0f0";
       t.style.left = Math.random() * 80 + "%"; t.style.top = "-60px";
       t.style.animation = "fall 3s linear"; t.style.textShadow = "0 0 15px #0f0";
@@ -253,7 +266,6 @@
       setTimeout(() => t.remove(), 3000);
     }
 
-    // === RETIRO ===
     document.getElementById("cashoutBtn").addEventListener("click", () => {
       if (fragments < 100) return alert("Mínimo 100 fragmentos");
       const amount = (fragments / 1000).toFixed(3);
