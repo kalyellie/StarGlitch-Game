@@ -118,10 +118,9 @@
     const VIP_WALLETS = [DEV_WALLET_SOLANA, DEV_WALLET_WORLD.toLowerCase()];
     let provider, wallet, network, fragments = 0, streak = 0, interval, isHodling = false, enemyInterval;
     const HAS_PLAYED_KEY = 'hasPlayedBefore';
+    let connectAttempted = false;
 
-    // === PHANTOM: MÓVIL + PC (SOLUCIÓN DEFINITIVA) ===
-    let phantomConnectRequested = false;
-
+    // === PHANTOM: MÓVIL (PERÚ) - ABRE + CONECTA ===
     document.getElementById("phantomBtn").addEventListener("click", () => {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -131,44 +130,56 @@
       }
 
       if (isMobile) {
-        phantomConnectRequested = true;
+        connectAttempted = true;
+        document.getElementById("status").innerText = "Abriendo Phantom... Pulsa CONECTAR";
+
+        // DEEP LINK QUE SÍ FUNCIONA EN PERÚ
         const dappUrl = encodeURIComponent(window.location.href);
-        const phantomLink = `https://phantom.app/ul/browse?uri=${dappUrl}&cluster=mainnet-beta`;
+        const phantomLink = `https://phantom.app/ul/browse?dappUrl=${dappUrl}&cluster=mainnet-beta`;
         window.location.href = phantomLink;
 
-        document.getElementById("status").innerText = "Abriendo Phantom... Pulsa CONECTAR";
+        // POLLING + LISTENER
+        startPhantomConnectPolling();
       } else {
         alert("Phantom no detectado. Instálalo desde phantom.app");
       }
     });
 
-    // === CONECTAR PHANTOM (PC + MÓVIL) ===
-    async function connectPhantom() {
+    function connectPhantom() {
       if (!window.solana?.isPhantom) return;
-      try {
-        const resp = await window.solana.connect();
-        wallet = resp.publicKey.toString();
-        network = "Solana";
-        provider = window.solana;
-        showEntry();
-      } catch (e) {
-        alert("Conexión cancelada");
-      }
+      window.solana.connect({ onlyIfTrusted: false })
+        .then(resp => {
+          wallet = resp.publicKey.toString();
+          network = "Solana";
+          provider = window.solana;
+          showEntry();
+        })
+        .catch(() => {
+          document.getElementById("status").innerText = "Conexión cancelada. Intenta de nuevo.";
+        });
     }
 
-    // === DETECTAR REGRESO DE PHANTOM (MÓVIL) ===
+    function startPhantomConnectPolling() {
+      const poll = setInterval(() => {
+        if (window.solana?.isPhantom && connectAttempted && !wallet) {
+          connectPhantom();
+        }
+      }, 800);
+
+      setTimeout(() => {
+        clearInterval(poll);
+        if (!wallet) {
+          document.getElementById("status").innerText = "Tiempo agotado. Pulsa PHANTOM de nuevo.";
+        }
+      }, 40000);
+    }
+
+    // === AL CARGAR PÁGINA (DESPUÉS DE REGRESAR) ===
     window.addEventListener("load", () => {
-      if (phantomConnectRequested && window.solana?.isPhantom) {
+      if (connectAttempted && window.solana?.isPhantom && !wallet) {
         connectPhantom();
       }
     });
-
-    // === POLLING EXTRA (SI FALLA EL EVENTO) ===
-    setInterval(() => {
-      if (phantomConnectRequested && window.solana?.isPhantom && !wallet) {
-        connectPhantom();
-      }
-    }, 1000);
 
     // === METAMASK ===
     document.getElementById("metamaskBtn").addEventListener("click", async () => {
@@ -185,7 +196,7 @@
       }
     });
 
-    // === RESTO DEL JUEGO ===
+    // === RESTO DEL JUEGO (IGUAL) ===
     function showEntry() {
       document.getElementById("status").innerText = `HODLer: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
       document.getElementById("connectSection").classList.add("hidden");
@@ -299,7 +310,6 @@
       setTimeout(() => t.remove(), 3000);
     }
 
-    // === COBRAR ===
     document.getElementById("cashoutBtn").addEventListener("click", () => {
       if (fragments < 100) return alert("Mínimo 100 fragmentos");
       const amount = (fragments / 1000).toFixed(3);
