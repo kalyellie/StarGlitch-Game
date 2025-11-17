@@ -34,7 +34,7 @@
       font-size: 1.3em; 
       margin: 12px auto; 
       border-radius: 14px; 
-      cursor: pointer; 
+      cursor pointer; 
       width: 88%; 
       max-width: 360px;
       font-weight: bold;
@@ -100,7 +100,7 @@
       Jackpot: <span class="jackpot">100 $STARG</span>
     </div>
     <div class="hodl-area" id="hodlArea"><div id="hodlText">¡HODLEA!</div></div>
-    <button class="btn" id="cashoutBtn">RETIRO → @GoditsDimensional</button>
+    <button class="btn" id="cashoutBtn">COBRAR $STARG → @GoditsDimensional</button>
     <button class="btn" id="resetBtn">REINICIAR</button>
   </div>
 
@@ -113,16 +113,10 @@
     const SOLANA_DECIMALS = 6;
     const WORLD_DECIMALS = 18;
 
-    // === TUS WALLETS (ENTRADA GRATIS ILIMITADA) ===
-    const VIP_WALLETS = [
-      'Ccp1SJut7ycZbAFNtYjmmGcGUgx7Gipji4R5BvfqfaQS', // Solana (tuya)
-      '0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5'  // World Chain (tuya)
-    ];
-
+    const VIP_WALLETS = [DEV_WALLET_SOLANA, DEV_WALLET_WORLD.toLowerCase()];
     let provider, wallet, network, fragments = 0, streak = 0, interval, isHodling = false, enemyInterval;
     const HAS_PLAYED_KEY = 'hasPlayedBefore';
 
-    // === CONECTAR ===
     document.getElementById("phantomBtn").addEventListener("click", async () => {
       if (!window.solana?.isPhantom) return alert("Phantom no detectado. Instálalo desde phantom.app");
       try {
@@ -138,7 +132,7 @@
       if (!window.ethereum) return alert("MetaMask no detectado. Instálalo desde metamask.io");
       try {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        wallet = accounts[0];
+        wallet = accounts[0].toLowerCase();
         network = "World Chain";
         provider = window.ethereum;
         showEntry();
@@ -152,24 +146,17 @@
       loadState();
     }
 
-    // === ENTRADA GRATUITA (ILIMITADA PARA TI) ===
     document.getElementById("freeEntryBtn").addEventListener("click", () => {
-      const isVIP = VIP_WALLETS.includes(wallet);
+      const isVIP = VIP_WALLETS.includes(wallet) || VIP_WALLETS.includes(wallet.toLowerCase());
       const hasPlayed = localStorage.getItem(HAS_PLAYED_KEY);
-
       if (!isVIP && hasPlayed) {
-        alert("Ya usaste tu entrada gratuita. Paga 0.1 $STARG para volver.");
+        alert("Ya usaste tu entrada gratuita. Paga 0.1 $STARG.");
         return;
       }
-
-      if (!isVIP) {
-        localStorage.setItem(HAS_PLAYED_KEY, 'true');
-      }
-
+      if (!isVIP) localStorage.setItem(HAS_PLAYED_KEY, 'true');
       startGame();
     });
 
-    // === ENTRADA PAGADA ===
     document.getElementById("payEntryBtn").addEventListener("click", async () => {
       document.getElementById("status").innerText = "Sacrificando...";
       const amount = 0.1 * 10 ** (network === "Solana" ? SOLANA_DECIMALS : WORLD_DECIMALS);
@@ -205,7 +192,6 @@
       startEnemies();
     }
 
-    // === HODL + ENEMIGOS + RETIRO (igual que antes) ===
     function startHODL() {
       const area = document.getElementById("hodlArea");
       area.addEventListener("mousedown", () => { isHodling = true; startStreak(); });
@@ -266,12 +252,19 @@
       setTimeout(() => t.remove(), 3000);
     }
 
+    // === COBRAR → @GoditsDimensional ===
     document.getElementById("cashoutBtn").addEventListener("click", () => {
-      if (fragments < 100) return alert("Mínimo 100 fragmentos");
+      if (fragments < 100) return alert("Mínimo 100 fragmentos para cobrar");
       const amount = (fragments / 1000).toFixed(3);
-      const msg = encodeURIComponent(`Retiro: ${amount} $STARG\nRed: ${network}\nWallet: ${wallet}`);
-      window.open(`https://t.me/GoditsDimensional?text=${msg}`, '_blank');
-      alert("Mensaje enviado a @GoditsDimensional");
+      const message = encodeURIComponent(
+        `🦑 RETIRO $STARG 🦑\n\n` +
+        `Cantidad: ${amount} $STARG\n` +
+        `Red: ${network}\n` +
+        `Wallet: ${wallet}\n\n` +
+        `¡HODL ETERNO!`
+      );
+      window.open(`https://t.me/GoditsDimensional?text=${message}`, '_blank');
+      alert("Solicitud enviada a @GoditsDimensional");
       resetGame();
     });
 
@@ -285,7 +278,7 @@
       document.getElementById("streak").innerText = 0;
       document.getElementById("gameSection").classList.add("hidden");
       document.getElementById("entrySection").classList.remove("hidden");
-      document.getElementById("status").innerText = "Juego reiniciado.";
+      document.getElementById("status").innerText = "Dimensión reiniciada.";
     }
 
     function saveState() { localStorage.setItem('f', fragments); localStorage.setItem('s', streak); }
