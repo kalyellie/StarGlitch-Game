@@ -9,7 +9,6 @@
   <script src="https://unpkg.com/@solana/spl-token@0.4.8/lib/index.iife.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
-    
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
       background: #000; 
@@ -21,12 +20,7 @@
     }
     @keyframes cosmicPulse { 0%,100% { filter: hue-rotate(0deg); } 50% { filter: hue-rotate(150deg); } }
     
-    .tentacle-core { 
-      font-size: 6em; 
-      animation: pulse 1.5s infinite; 
-      text-shadow: 0 0 25px #0f0, 0 0 50px #0f0;
-      margin: 20px 0;
-    }
+    .tentacle-core { font-size: 6em; animation: pulse 1.5s infinite; text-shadow: 0 0 25px #0f0; margin: 20px 0; }
     @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.35); } }
     
     h1 { font-size: 1.8em; margin: 12px; letter-spacing: 4px; text-shadow: 0 0 15px #0f0; }
@@ -84,8 +78,9 @@
     <button class="btn" id="metamaskBtn">METAMASK • WORLD CHAIN</button>
   </div>
 
-  <div id="paymentSection" class="hidden">
-    <button class="btn" id="payBtn">OFRECER 0.1 $STARG AL VACÍO</button>
+  <div id="entrySection" class="hidden">
+    <button class="btn" id="freeEntryBtn">ENTRADA GRATUITA (1ª VEZ)</button>
+    <button class="btn" id="payEntryBtn">PAGAR 0.1 $STARG (SIGUIENTES)</button>
   </div>
 
   <div id="gameSection" class="hidden">
@@ -103,53 +98,56 @@
     const DEV_WALLET_SOLANA = '5ryaXDPvu1TkDWztTnqwq17fcj6AVVtw3bcrc1g1te6T';
     const DEV_WALLET_WORLD = '0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5';
     const SOLANA_CA = '3nhJUCbLwoT7w1iUWE1MUER1YbUmqJxeqBVpsBZFpump';
-    const WORLD_CA = '0xa3Ad51ebd02690317b34f83329F082F9b4f84683';
+    const WORLD_CA = '0xa3Ad51ebd02690317b34f83329F2f9b4f84683';
     const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
     const SOLANA_DECIMALS = 6;
     const WORLD_DECIMALS = 18;
 
     let provider, wallet, network, fragments = 0, streak = 0, interval;
+    const HAS_PLAYED_KEY = 'hasPlayedBefore';
 
-    // === PHANTOM ===
+    // === CONECTAR ===
     document.getElementById("phantomBtn").addEventListener("click", async () => {
-      if (!window.solana?.isPhantom) {
-        return alert("Phantom no detectado. Instálalo desde phantom.app");
-      }
+      if (!window.solana?.isPhantom) return alert("Phantom no detectado. Instálalo desde phantom.app");
       try {
         const resp = await window.solana.connect({ onlyIfTrusted: false });
         wallet = resp.publicKey.toString();
         network = "Solana";
         provider = window.solana;
-        showPayment();
-      } catch (e) {
-        alert("Conexión cancelada o error.");
-      }
+        showEntry();
+      } catch (e) { alert("Conexión cancelada"); }
     });
 
-    // === METAMASK ===
     document.getElementById("metamaskBtn").addEventListener("click", async () => {
-      if (!window.ethereum) {
-        return alert("MetaMask no detectado. Instálalo desde metamask.io");
-      }
+    if (!window.ethereum) return alert("MetaMask no detectado. Instálalo desde metamask.io");
       try {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         wallet = accounts[0];
         network = "World Chain";
         provider = window.ethereum;
-        showPayment();
-      } catch (e) {
-        alert("Conexión cancelada o error.");
-      }
+        showEntry();
+      } catch (e) { alert("Conexión cancelada"); }
     });
 
-    function showPayment() {
+    function showEntry() {
       document.getElementById("status").innerText = `HODLer: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
       document.getElementById("connectSection").classList.add("hidden");
-      document.getElementById("paymentSection").classList.remove("hidden");
+      document.getElementById("entrySection").classList.remove("hidden");
       loadState();
     }
 
-    document.getElementById("payBtn").addEventListener("click", async () => {
+    // === ENTRADA GRATUITA ===
+    document.getElementById("freeEntryBtn").addEventListener("click", () => {
+      if (localStorage.getItem(HAS_PLAYED_KEY)) {
+        alert("Ya usaste tu entrada gratuita. Paga 0.1 $STARG para volver.");
+        return;
+      }
+      localStorage.setItem(HAS_PLAYED_KEY, 'true');
+      startGame();
+    });
+
+    // === ENTRADA PAGADA ===
+    document.getElementById("payEntryBtn").addEventListener("click", async () => {
       document.getElementById("status").innerText = "Sacrificando al vacío...";
       const amount = 0.1 * 10 ** (network === "Solana" ? SOLANA_DECIMALS : WORLD_DECIMALS);
       try {
@@ -168,20 +166,23 @@
           await provider.signAndSendTransaction(tx);
         } else {
           const web3 = new Web3(provider);
-          const token = new web3.eth.Contract([
-            {"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"}
-          ], WORLD_CA);
+          const token = new web3.eth.Contract([{"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"}], WORLD_CA);
           await token.methods.transfer(DEV_WALLET_WORLD, amount).send({ from: wallet });
         }
-        document.getElementById("status").innerText = "¡Ofrenda aceptada por el abismo!";
-        document.getElementById("paymentSection").classList.add("hidden");
-        document.getElementById("gameSection").classList.remove("hidden");
-        startHODL();
+        startGame();
+        document.getElementById("status").innerText = "¡Ofrenda aceptada! Bienvenido al abismo.";
       } catch (err) {
-        document.getElementById("status").innerText = "El vacío rechazó tu ofrenda.";
+        document.getElementById("status").innerText = "El vacío rechazó tu ofrenda (sin fondos, red errónea, etc.).";
       }
     });
 
+    function startGame() {
+      document.getElementById("entrySection").classList.add("hidden");
+      document.getElementById("gameSection").classList.remove("hidden");
+      startHODL();
+    }
+
+    // === JUEGO ===
     function startHODL() {
       const area = document.getElementById("hodlArea");
       area.addEventListener("mousedown", startStreak);
@@ -222,19 +223,17 @@
       fragments = 0; streak = 0;
       document.getElementById("fragments").innerText = 0;
       document.getElementById("streak").innerText = 0;
-      localStorage.clear();
-      document.getElementById("status").innerText = "Dimensión reiniciada";
+      document.getElementById("status").innerText = "Dimensión reiniciada. Vuelve a entrar.";
+      document.getElementById("gameSection").classList.add("hidden");
+      document.getElementById("entrySection").classList.remove("hidden");
     }
 
     function spawnTentacle() {
       const t = document.createElement("div");
       t.innerText = "🦑";
-      t.style.position = "absolute";
-      t.style.fontSize = "3.2em";
-      t.style.left = Math.random() * 85 + "%";
-      t.style.top = "-60px";
-      t.style.animation = "fall 3.5s linear";
-      t.style.textShadow = "0 0 15px #0f0";
+      t.style.position = "absolute"; t.style.fontSize = "3.2em";
+      t.style.left = Math.random() * 85 + "%"; t.style.top = "-60px";
+      t.style.animation = "fall 3.5s linear"; t.style.textShadow = "0 0 15px #0f0";
       document.body.appendChild(t);
       setTimeout(() => t.remove(), 3500);
     }
