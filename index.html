@@ -3,53 +3,152 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Star Glitch: XYRATH-9</title>
+  <title>STAR GLITCH: XYRATH-9</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/web3@1.10.4/dist/web3.min.js"></script>
   <script src="https://unpkg.com/@solana/spl-token@0.4.8/lib/index.iife.min.js"></script>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
+    
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; }
-    .tentacle { font-size: 5em; animation: pulse 2s infinite; margin: 20px 0; }
-    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
-    .container { padding: 20px; max-width: 500px; margin: 0 auto; }
-    h1 { font-size: 1.8em; margin: 10px 0; }
-    .stats { margin: 15px 0; font-size: 1.2em; line-height: 1.6; }
-    .btn { background: #0f0; color: #000; border: none; padding: 15px 30px; font-size: 1.3em; margin: 10px; border-radius: 10px; cursor: pointer; width: 90%; }
-    .hodl-area { width: 100%; height: 50vh; background: rgba(0,255,0,0.1); display: flex; align-items: center; justify-content: center; font-size: 2em; margin: 20px 0; border: 2px solid #0f0; border-radius: 12px; }
-    .jackpot { color: #ff0; font-weight: bold; }
+    body { 
+      background: #000 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><filter id="glitch"><feTurbulence baseFrequency="0.02" numOctaves="3" result="turbulence"/><feDisplacementMap in="SourceGraphic" in2="turbulence" scale="5"/></filter><rect width="100" height="100" fill="%23000"/><path d="M50 10 Q60 30 50 50 Q40 70 50 90" stroke="%2300ff00" stroke-width="3" fill="none" filter="url(%23glitch)"/></svg>') repeat;
+      color: #0f0; 
+      font-family: 'Orbitron', 'Courier New', monospace; 
+      text-align: center; 
+      overflow: hidden;
+      animation: cosmicPulse 8s infinite;
+      touch-action: manipulation;
+    }
+    @keyframes cosmicPulse { 0%,100% { filter: hue-rotate(0deg); } 50% { filter: hue-rotate(90deg); } }
+    
+    .tentacle-core { 
+      font-size: 6em; 
+      animation: corePulse 1.5s infinite, float 3s infinite ease-in-out; 
+      text-shadow: 0 0 20px #0f0, 0 0 40px #0f0;
+      margin: 20px 0;
+    }
+    @keyframes corePulse { 0%,100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.4) rotate(5deg); } }
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    
+    .container { padding: 20px; max-width: 100%; }
+    h1 { 
+      font-size: 1.6em; 
+      margin: 10px 0; 
+      letter-spacing: 3px;
+      text-shadow: 0 0 10px #0f0;
+      animation: glitchText 2s infinite;
+    }
+    @keyframes glitchText { 0%,100% { text-shadow: 2px 0 #0f0, -2px 0 #f00; } 50% { text-shadow: -2px 0 #0f0, 2px 0 #00f; } }
+    
+    .lore { 
+      font-size: 0.9em; 
+      margin: 15px 0; 
+      line-height: 1.5; 
+      opacity: 0.8;
+      animation: fadeIn 2s;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 0.8; } }
+    
+    .btn { 
+      background: linear-gradient(45deg, #0f0, #00f); 
+      color: #000; 
+      border: 2px solid #0f0; 
+      padding: 14px 28px; 
+      font-size: 1.2em; 
+      margin: 10px auto; 
+      border-radius: 12px; 
+      cursor: pointer; 
+      width: 85%; 
+      max-width: 320px;
+      font-weight: bold;
+      box-shadow: 0 0 15px #0f0;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn::before {
+      content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: 0.5s;
+    }
+    .btn:hover::before { left: 100%; }
+    .btn:active { transform: scale(0.95); box-shadow: 0 0 25px #0f0; }
+    
+    .hodl-area { 
+      width: 100%; 
+      height: 48vh; 
+      background: rgba(0,255,0,0.05); 
+      border: 3px dashed #0f0; 
+      border-radius: 16px;
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-size: 1.8em; 
+      margin: 20px 0; 
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(0,255,0,0.3) inset;
+    }
+    .hodl-area::after {
+      content: '🦑🦑🦑'; 
+      position: absolute; 
+      bottom: 10px; 
+      font-size: 1.5em; 
+      opacity: 0.3;
+      animation: swim 10s linear infinite;
+    }
+    @keyframes swim { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+    
+    .jackpot { color: #ff0; font-weight: bold; text-shadow: 0 0 10px #ff0; }
     .hidden { display: none; }
-    #status { margin: 10px 0; font-size: 1em; min-height: 24px; }
+    #status { margin: 12px 0; font-size: 0.95em; min-height: 24px; color: #0f0; }
+    
+    .tentacle-fall { 
+      position: absolute; 
+      font-size: 2.5em; 
+      pointer-events: none; 
+      animation: fall 3s linear forwards;
+      text-shadow: 0 0 10px #0f0;
+    }
+    @keyframes fall { from { top: -60px; opacity: 1; } to { top: 100vh; opacity: 0; } }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="tentacle">🦑</div>
+    <div class="tentacle-core">🦑</div>
     <h1>STAR GLITCH: XYRATH-9</h1>
-    <p id="status">Conecta tu wallet</p>
+    <p class="lore">
+      En las profundidades de Xyrath-9, <strong>Kieran Star</strong> halló la moneda rota.<br>
+      Rodeada de tentáculos cósmicos, juró: <em>"HODL con vida"</em>.
+    </p>
+    <p id="status">Conecta tu alma al glitch</p>
 
     <div id="connectSection">
-      <button class="btn" id="phantomBtn">PHANTOM (Solana)</button>
-      <button class="btn" id="metamaskBtn">METAMASK (World Chain)</button>
+      <button class="btn" id="phantomBtn">PHANTOM • SOLANA</button>
+      <button class="btn" id="metamaskBtn">METAMASK • WORLD CHAIN</button>
     </div>
 
     <div id="paymentSection" class="hidden">
-      <button class="btn" id="payBtn">PAGAR 0.1 $STARG</button>
+      <button class="btn" id="payBtn">OFRECER 0.1 $STARG</button>
     </div>
 
     <div id="gameSection" class="hidden">
       <div class="stats">
-        Fragmentos: <span id="fragments">0</span><br>
-        Streak: <span id="streak">0</span>s<br>
-        Jackpot: <span class="jackpot">100 $STARG</span>
+        Fragmentos Cósmicos: <span id="fragments">0</span><br>
+        Streak Eterno: <span id="streak">0</span>s<br>
+        Jackpot Glitch: <span class="jackpot">100 $STARG</span>
       </div>
-      <div class="hodl-area" id="hodlArea"><div id="hodlText">¡HODLEA!</div></div>
-      <button class="btn" id="cashoutBtn">COBRAR</button>
-      <button class="btn" id="resetBtn">RESET</button>
+      <div class="hodl-area" id="hodlArea"><div id="hodlText">¡HODLEA EL VACÍO!</div></div>
+      <button class="btn" id="cashoutBtn">RECLAMAR GLITCH</button>
+      <button class="btn" id="resetBtn">REINICIAR DIMENSIÓN</button>
     </div>
   </div>
 
   <script>
+    Telegram.WebApp.ready(); Telegram.WebApp.expand();
+
     const DEV_WALLET_SOLANA = '5ryaXDPvu1TkDWztTnqwq17fcj6AVVtw3bcrc1g1te6T';
     const DEV_WALLET_WORLD = '0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5';
     const SOLANA_CA = '3nhJUCbLwoT7w1iUWE1MUER1YbUmqJxeqBVpsBZFpump';
@@ -60,42 +159,64 @@
 
     let provider, wallet, network, fragments = 0, streak = 0, interval;
 
-    // === CONECTAR PHANTOM ===
+    // === CONEXIÓN PHANTOM ===
     document.getElementById("phantomBtn").addEventListener("click", async () => {
-      if (!window.solana?.isPhantom) return alert("Phantom no detectado. Instálalo.");
-      try {
-        const resp = await window.solana.connect({ onlyIfTrusted: false });
-        wallet = resp.publicKey.toString();
-        network = "Solana";
-        provider = window.solana;
-        showPayment();
-      } catch (e) { alert("Conexión cancelada"); }
+      document.getElementById("status").innerText = "Invocando tentáculos...";
+      const session = Date.now();
+      sessionStorage.setItem('session', session);
+      const callback = encodeURIComponent(`${window.location.href.split('?')[0]}?session=${session}&solana=1`);
+      const link = `https://phantom.app/ul/v1/connect?app_url=${encodeURIComponent(window.location.origin)}&redirect_link=${callback}&cluster=mainnet-beta`;
+      Telegram.WebApp.openLink(link);
+
+      const poll = setInterval(async () => {
+        if (window.solana?.isPhantom && sessionStorage.getItem('session') === session.toString()) {
+          try {
+            const resp = await window.solana.connect({ onlyIfTrusted: false });
+            wallet = resp.publicKey.toString();
+            network = "Solana";
+            provider = window.solana;
+            clearInterval(poll);
+            showPayment();
+          } catch (e) { console.log(e); }
+        }
+      }, 600);
+      setTimeout(() => clearInterval(poll), 30000);
     });
 
-    // === CONECTAR METAMASK ===
+    // === CONEXIÓN METAMASK ===
     document.getElementById("metamaskBtn").addEventListener("click", async () => {
-      if (!window.ethereum) return alert("MetaMask no detectado. Instálalo.");
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        wallet = accounts[0];
-        network = "World Chain";
-        provider = window.ethereum;
-        showPayment();
-      } catch (e) { alert("Conexión cancelada"); }
+      document.getElementById("status").innerText = "Despertando el glitch...";
+      const session = Date.now();
+      sessionStorage.setItem('session', session);
+      const callback = encodeURIComponent(`${window.location.href.split('?')[0]}`);
+      const link = `https://metamask.app.link/dapp/${window.location.host}?redirect=${callback}&action=connect`;
+      Telegram.WebApp.openLink(link);
+
+      const poll = setInterval(async () => {
+        if (window.ethereum && sessionStorage.getItem('session') === session.toString()) {
+          try {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            wallet = accounts[0];
+            network = "World Chain";
+            provider = window.ethereum;
+            clearInterval(poll);
+            showPayment();
+          } catch (e) { console.log(e); }
+        }
+      }, 600);
+      setTimeout(() => clearInterval(poll), 30000);
     });
 
     function showPayment() {
-      document.getElementById("status").innerText = `${network}: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
+      document.getElementById("status").innerText = `HODLer: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
       document.getElementById("connectSection").classList.add("hidden");
       document.getElementById("paymentSection").classList.remove("hidden");
       loadState();
     }
 
-    // === PAGO ===
     document.getElementById("payBtn").addEventListener("click", async () => {
-      document.getElementById("status").innerText = "Procesando pago...";
+      document.getElementById("status").innerText = "Sacrificando al vacío...";
       const amount = 0.1 * 10 ** (network === "Solana" ? SOLANA_DECIMALS : WORLD_DECIMALS);
-
       try {
         if (network === "Solana") {
           const connection = new Solana.Connection(SOLANA_RPC, 'confirmed');
@@ -109,54 +230,52 @@
               amount
             )
           );
-          const { signature } = await provider.signAndSendTransaction(tx);
-          await connection.confirmTransaction(signature);
+          await provider.signAndSendTransaction(tx);
         } else {
           const web3 = new Web3(provider);
           const token = new web3.eth.Contract([{"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"}], WORLD_CA);
           await token.methods.transfer(DEV_WALLET_WORLD, amount).send({ from: wallet });
         }
-        document.getElementById("status").innerText = "¡Pago recibido!";
+        document.getElementById("status").innerText = "¡Ofrenda aceptada!";
         document.getElementById("paymentSection").classList.add("hidden");
         document.getElementById("gameSection").classList.remove("hidden");
         startHODL();
       } catch (err) {
-        document.getElementById("status").innerText = "Error: " + (err.message || "Cancelado");
+        document.getElementById("status").innerText = "El vacío rechazó tu ofrenda.";
       }
     });
 
-    // === JUEGO ===
     function startHODL() {
       const area = document.getElementById("hodlArea");
-      area.addEventListener("mousedown", startStreak);
       area.addEventListener("touchstart", e => { e.preventDefault(); startStreak(); });
-      area.addEventListener("mouseup", endStreak);
+      area.addEventListener("mousedown", startStreak);
       area.addEventListener("touchend", endStreak);
+      area.addEventListener("mouseup", endStreak);
     }
 
     function startStreak() {
       streak = 0;
-      document.getElementById("hodlText").innerText = "HODLEANDO!";
+      document.getElementById("hodlText").innerText = "¡HODLEANDO EL VACÍO!";
       interval = setInterval(() => {
         streak++;
         fragments += streak * (streak > 30 ? 2 : 1);
         document.getElementById("streak").innerText = streak;
         document.getElementById("fragments").innerText = fragments;
         saveState();
-        if (streak % 10 === 0) addTentacle();
+        if (streak % 10 === 0) spawnTentacle();
       }, 1000);
     }
 
     function endStreak() {
       clearInterval(interval);
-      document.getElementById("hodlText").innerText = "¡HODLEA!";
-      if (streak > 5) alert(`${streak}s! +${(streak/10).toFixed(1)} $STARG`);
+      document.getElementById("hodlText").innerText = "¡HODLEA EL VACÍO!";
+      if (streak > 5) alert(`¡${streak}s en el abismo! +${(streak/10).toFixed(1)} $STARG`);
       saveState();
     }
 
     document.getElementById("cashoutBtn").addEventListener("click", () => {
-      if (fragments < 100) return alert("Mínimo 100 fragmentos");
-      alert(`Cobras ${(fragments/1000).toFixed(3)} $STARG`);
+      if (fragments < 100) return alert("100 fragmentos para cruzar el umbral");
+      alert(`Reclamas ${(fragments/1000).toFixed(3)} $STARG del glitch`);
       resetGame();
     });
 
@@ -167,32 +286,23 @@
       document.getElementById("fragments").innerText = 0;
       document.getElementById("streak").innerText = 0;
       localStorage.clear();
-      document.getElementById("status").innerText = "Juego reseteado";
+      document.getElementById("status").innerText = "Dimensión reiniciada";
     }
 
-    function addTentacle() {
+    function spawnTentacle() {
       const t = document.createElement("div");
-      t.innerText = "🦑"; t.style.position = "absolute"; t.style.fontSize = "3em";
-      t.style.left = Math.random() * 80 + "%"; t.style.top = "-50px";
-      t.style.animation = "fall 3s linear"; document.body.appendChild(t);
+      t.className = "tentacle-fall";
+      t.innerText = "🦑";
+      t.style.left = Math.random() * 90 + "%";
+      document.body.appendChild(t);
       setTimeout(() => t.remove(), 3000);
     }
 
-    function saveState() {
-      localStorage.setItem('fragments', fragments);
-      localStorage.setItem('streak', streak);
-    }
-
-    function loadState() {
-      fragments = parseInt(localStorage.getItem('fragments') || 0);
-      streak = parseInt(localStorage.getItem('streak') || 0);
+    function saveState() { localStorage.setItem('f', fragments); localStorage.setItem('s', streak); }
+    function loadState() { fragments = +localStorage.getItem('f') || 0; streak = +localStorage.getItem('s') || 0;
       document.getElementById("fragments").innerText = fragments;
       document.getElementById("streak").innerText = streak;
     }
-
-    const style = document.createElement('style');
-    style.innerHTML = `@keyframes fall { from { top: -50px; } to { top: 100vh; } }`;
-    document.head.appendChild(style);
 
     loadState();
   </script>
