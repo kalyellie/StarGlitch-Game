@@ -15,57 +15,59 @@
       color: #0f0; 
       font-family: 'Orbitron', monospace; 
       text-align: center; 
-      overflow: hidden;
+      overflow-x: hidden;
       animation: cosmicPulse 12s infinite;
+      min-height: 100vh;
     }
     @keyframes cosmicPulse { 0%,100% { filter: hue-rotate(0deg); } 50% { filter: hue-rotate(150deg); } }
     
-    .tentacle-core { font-size: 6em; animation: pulse 1.5s infinite; text-shadow: 0 0 25px #0f0; margin: 20px 0; }
+    .tentacle-core { font-size: 5em; animation: pulse 1.5s infinite; text-shadow: 0 0 25px #0f0; margin: 15px 0; }
     @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.35); } }
     
-    h1 { font-size: 1.8em; margin: 12px; letter-spacing: 4px; text-shadow: 0 0 15px #0f0; }
-    .lore { font-size: 0.95em; margin: 16px; opacity: 0.85; line-height: 1.5; }
+    h1 { font-size: 1.6em; margin: 10px; letter-spacing: 3px; text-shadow: 0 0 15px #0f0; }
+    .lore { font-size: 0.9em; margin: 14px; opacity: 0.85; line-height: 1.5; }
     
     .btn { 
       background: linear-gradient(45deg, #0f0, #00f); 
       color: #000; 
       border: 3px solid #0f0; 
-      padding: 16px 36px; 
-      font-size: 1.3em; 
-      margin: 12px auto; 
+      padding: 14px 32px; 
+      font-size: 1.2em; 
+      margin: 10px auto; 
       border-radius: 14px; 
       cursor: pointer; 
-      width: 88%; 
-      max-width: 360px;
+      width: 90%; 
+      max-width: 340px;
       font-weight: bold;
       box-shadow: 0 0 25px #0f0;
       transition: all 0.3s ease;
+      display: block;
     }
-    .btn:hover { transform: scale(1.06); box-shadow: 0 0 40px #0f0; }
+    .btn:hover { transform: scale(1.05); box-shadow: 0 0 35px #0f0; }
     .btn:active { transform: scale(0.94); }
     
     .hodl-area { 
-      width: 100%; height: 50vh; background: rgba(0,255,0,0.06); 
+      width: 100%; height: 45vh; background: rgba(0,255,0,0.06); 
       border: 3px dashed #0f0; border-radius: 18px; 
       display: flex; align-items: center; justify-content: center; 
-      font-size: 2.1em; margin: 22px 0; position: relative; overflow: hidden;
+      font-size: 1.9em; margin: 18px 0; position: relative; overflow: hidden;
       box-shadow: inset 0 0 30px rgba(0,255,0,0.2);
     }
     .hodl-area::after { 
-      content: '🦑🦑🦑🦑🦑'; 
-      position: absolute; bottom: 12px; font-size: 1.6em; opacity: 0.3; 
+      content: 'SQUID SQUID SQUID SQUID SQUID'; 
+      position: absolute; bottom: 10px; font-size: 1.4em; opacity: 0.3; 
       animation: swim 9s linear infinite;
     }
     @keyframes swim { from { transform: translateX(-100%); } to { transform: translateX(120%); } }
     
-    .stats { margin: 18px 0; font-size: 1.2em; line-height: 1.8; }
+    .stats { margin: 16px 0; font-size: 1.1em; line-height: 1.7; }
     .jackpot { color: #ff0; font-weight: bold; text-shadow: 0 0 12px #ff0; }
-    .hidden { display: none; }
-    #status { margin: 14px; font-size: 1.05em; min-height: 28px; color: #0f0; }
+    .hidden { display: none !important; }
+    #status { margin: 12px; font-size: 1em; min-height: 24px; color: #0f0; }
 
     .enemy { 
       position: absolute; 
-      font-size: 2.5em; 
+      font-size: 2.3em; 
       color: #f00; 
       text-shadow: 0 0 15px #f00; 
       animation: fall 4s linear; 
@@ -75,7 +77,7 @@
   </style>
 </head>
 <body>
-  <div class="tentacle-core">🦑</div>
+  <div class="tentacle-core">SQUID</div>
   <h1>STAR GLITCH: XYRATH-9</h1>
   <p class="lore">
     En las profundidades de <strong>Xyrath-9</strong>, <em>Kieran Star</em> halló la moneda rota.<br>
@@ -116,57 +118,61 @@
     const VIP_WALLETS = [DEV_WALLET_SOLANA, DEV_WALLET_WORLD.toLowerCase()];
     let provider, wallet, network, fragments = 0, streak = 0, interval, isHodling = false, enemyInterval;
     const HAS_PLAYED_KEY = 'hasPlayedBefore';
+    let isPolling = false;
 
-    // === DETECCIÓN PHANTOM EN MÓVIL (SOLUCIONADO) ===
-    function isPhantomAvailable() {
-      return !!(window.solana && window.solana.isPhantom);
-    }
-
+    // === PHANTOM EN MÓVIL (CON POLLING) ===
     document.getElementById("phantomBtn").addEventListener("click", async () => {
-      if (!isPhantomAvailable()) {
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        if (isMobile) {
-          // En móvil: abrir Phantom App
-          const dappUrl = encodeURIComponent(window.location.href);
-          window.location.href = `https://phantom.app/ul/browse?dappUrl=${dappUrl}`;
-          return;
-        } else {
-          return alert("Phantom no detectado. Instálalo desde phantom.app");
-        }
+      if (window.solana?.isPhantom) {
+        try {
+          const resp = await window.solana.connect({ onlyIfTrusted: false });
+          wallet = resp.publicKey.toString();
+          network = "Solana";
+          provider = window.solana;
+          showEntry();
+        } catch (e) { alert("Conexión cancelada"); }
+        return;
       }
 
-      try {
-        const resp = await window.solana.connect({ onlyIfTrusted: false });
-        wallet = resp.publicKey.toString();
-        network = "Solana";
-        provider = window.solana;
-        showEntry();
-      } catch (e) {
-        alert("Conexión cancelada o error.");
-      }
+      // MÓVIL: abrir Phantom
+      const dappUrl = encodeURIComponent(window.location.href);
+      window.location.href = `https://phantom.app/ul/browse?dappUrl=${dappUrl}&cluster=mainnet-beta`;
+
+      // Polling al regreso
+      if (isPolling) return;
+      isPolling = true;
+      document.getElementById("status").innerText = "Esperando conexión...";
+      const poll = setInterval(() => {
+        if (window.solana?.isPhantom) {
+          clearInterval(poll);
+          isPolling = false;
+          window.solana.connect({ onlyIfTrusted: false }).then(resp => {
+            wallet = resp.publicKey.toString();
+            network = "Solana";
+            provider = window.solana;
+            showEntry();
+          }).catch(() => {
+            document.getElementById("status").innerText = "Conexión cancelada.";
+            isPolling = false;
+          });
+        }
+      }, 800);
+      setTimeout(() => { clearInterval(poll); isPolling = false; }, 30000);
     });
 
-    // === METAMASK (igual, con fallback móvil) ===
+    // === METAMASK EN MÓVIL ===
     document.getElementById("metamaskBtn").addEventListener("click", async () => {
-      if (!window.ethereum) {
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        if (isMobile) {
-          window.location.href = "https://metamask.app.link/dapp/" + window.location.host;
-          return;
-        } else {
-          return alert("MetaMask no detectado. Instálalo desde metamask.io");
-        }
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          wallet = accounts[0].toLowerCase();
+          network = "World Chain";
+          provider = window.ethereum;
+          showEntry();
+        } catch (e) { alert("Conexión cancelada"); }
+        return;
       }
 
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        wallet = accounts[0].toLowerCase();
-        network = "World Chain";
-        provider = window.ethereum;
-        showEntry();
-      } catch (e) {
-        alert("Conexión cancelada");
-      }
+      window.location.href = `https://metamask.app.link/dapp/${window.location.host}`;
     });
 
     function showEntry() {
@@ -266,7 +272,7 @@
     function spawnEnemy() {
       const e = document.createElement("div");
       e.className = "enemy";
-      e.innerText = "🦑";
+      e.innerText = "SQUID";
       e.style.left = Math.random() * 80 + "%";
       document.body.appendChild(e);
       setTimeout(() => e.remove(), 4000);
@@ -274,20 +280,20 @@
 
     function spawnFriendlyTentacle() {
       const t = document.createElement("div");
-      t.innerText = "🦑";
-      t.style.position = "absolute"; t.style.fontSize = "3em"; t.style.color = "#0f0";
+      t.innerText = "SQUID";
+      t.style.position = "absolute"; t.style.fontSize = "2.8em"; t.style.color = "#0f0";
       t.style.left = Math.random() * 80 + "%"; t.style.top = "-60px";
       t.style.animation = "fall 3s linear"; t.style.textShadow = "0 0 15px #0f0";
       document.body.appendChild(t);
       setTimeout(() => t.remove(), 3000);
     }
 
-    // === BOTÓN DE COBRAR (FUNCIONAL) ===
+    // === BOTÓN DE COBRAR (SIEMPRE VISIBLE) ===
     document.getElementById("cashoutBtn").addEventListener("click", () => {
       if (fragments < 100) return alert("Mínimo 100 fragmentos para cobrar");
       const amount = (fragments / 1000).toFixed(3);
       const message = encodeURIComponent(
-        `🦑 RETIRO $STARG 🦑\n\n` +
+        `SQUID RETIRO $STARG SQUID\n\n` +
         `Cantidad: ${amount} $STARG\n` +
         `Red: ${network}\n` +
         `Wallet: ${wallet}\n\n` +
