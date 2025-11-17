@@ -34,7 +34,7 @@
       font-size: 1.3em; 
       margin: 12px auto; 
       border-radius: 14px; 
-      cursor pointer; 
+      cursor: pointer; 
       width: 88%; 
       max-width: 360px;
       font-weight: bold;
@@ -105,7 +105,7 @@
   </div>
 
   <script>
-    const DEV_WALLET_SOLANA = 'Ccp1SJut7ycZbAFNtYjmmGcGUgx7Gipji4R5BvfqfaQS';
+    const DEV_WALLET_SOLANA = '5ryaXDPvu1TkDWztTnqwq17fcj6AVVtw3bcrc1g1te6T';
     const DEV_WALLET_WORLD = '0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5';
     const SOLANA_CA = '3nhJUCbLwoT7w1iUWE1MUER1YbUmqJxeqBVpsBZFpump';
     const WORLD_CA = '0xa3Ad51ebd02690317b34f83329F2f9b4f84683';
@@ -117,26 +117,56 @@
     let provider, wallet, network, fragments = 0, streak = 0, interval, isHodling = false, enemyInterval;
     const HAS_PLAYED_KEY = 'hasPlayedBefore';
 
+    // === DETECCIÓN PHANTOM EN MÓVIL (SOLUCIONADO) ===
+    function isPhantomAvailable() {
+      return !!(window.solana && window.solana.isPhantom);
+    }
+
     document.getElementById("phantomBtn").addEventListener("click", async () => {
-      if (!window.solana?.isPhantom) return alert("Phantom no detectado. Instálalo desde phantom.app");
+      if (!isPhantomAvailable()) {
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          // En móvil: abrir Phantom App
+          const dappUrl = encodeURIComponent(window.location.href);
+          window.location.href = `https://phantom.app/ul/browse?dappUrl=${dappUrl}`;
+          return;
+        } else {
+          return alert("Phantom no detectado. Instálalo desde phantom.app");
+        }
+      }
+
       try {
         const resp = await window.solana.connect({ onlyIfTrusted: false });
         wallet = resp.publicKey.toString();
         network = "Solana";
         provider = window.solana;
         showEntry();
-      } catch (e) { alert("Conexión cancelada"); }
+      } catch (e) {
+        alert("Conexión cancelada o error.");
+      }
     });
 
+    // === METAMASK (igual, con fallback móvil) ===
     document.getElementById("metamaskBtn").addEventListener("click", async () => {
-      if (!window.ethereum) return alert("MetaMask no detectado. Instálalo desde metamask.io");
+      if (!window.ethereum) {
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          window.location.href = "https://metamask.app.link/dapp/" + window.location.host;
+          return;
+        } else {
+          return alert("MetaMask no detectado. Instálalo desde metamask.io");
+        }
+      }
+
       try {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         wallet = accounts[0].toLowerCase();
         network = "World Chain";
         provider = window.ethereum;
         showEntry();
-      } catch (e) { alert("Conexión cancelada"); }
+      } catch (e) {
+        alert("Conexión cancelada");
+      }
     });
 
     function showEntry() {
@@ -147,7 +177,7 @@
     }
 
     document.getElementById("freeEntryBtn").addEventListener("click", () => {
-      const isVIP = VIP_WALLETS.includes(wallet) || VIP_WALLETS.includes(wallet.toLowerCase());
+      const isVIP = VIP_WALLETS.includes(wallet);
       const hasPlayed = localStorage.getItem(HAS_PLAYED_KEY);
       if (!isVIP && hasPlayed) {
         alert("Ya usaste tu entrada gratuita. Paga 0.1 $STARG.");
@@ -252,7 +282,7 @@
       setTimeout(() => t.remove(), 3000);
     }
 
-    // === COBRAR → @GoditsDimensional ===
+    // === BOTÓN DE COBRAR (FUNCIONAL) ===
     document.getElementById("cashoutBtn").addEventListener("click", () => {
       if (fragments < 100) return alert("Mínimo 100 fragmentos para cobrar");
       const amount = (fragments / 1000).toFixed(3);
