@@ -6,23 +6,23 @@
   <title>STAR GLITCH: XYRATH-9</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
-    * { margin:0; padding:0; box-sizing:border-box; touch-action:manipulation; }
-    body { background:#000; color:#0f0; font-family:'Orbitron',sans-serif; text-align:center; overflow:hidden; }
-    .tentacle { font-size:5em; animation:pulse 1.5s infinite; text-shadow:0 0 30px #0f0; }
-    @keyframes pulse { 0%,100% {transform:scale(1)} 50% {transform:scale(1.4)} }
-    h1 { font-size:2em; margin:15px; letter-spacing:4px; text-shadow:0 0 20px #0f0; }
-    .lore { margin:20px; opacity:0.9; line-height:1.6; }
-    .btn { background:linear-gradient(45deg,#0f0,#00f); color:#000; border:3px solid #0f0; padding:16px 32px;
-           font-size:1.3em; margin:12px auto; border-radius:15px; cursor:pointer; width:88%; max-width:380px;
-           font-weight:bold; box-shadow:0 0 30px #0f0; transition:0.3s; }
-    .btn:hover { transform:scale(1.06); box-shadow:0 0 50px #0f0; }
-    #status { margin:15px; font-size:1.2em; color:#0f0; }
-    .hidden { display:none; }
-    canvas { background:#000; display:block; margin:20px auto; border:4px dashed #0f0; box-shadow:0 0 40px #0f0; }
-    .stats { margin:15px; font-size:1.3em; }
-    .shop { background:rgba(0,255,0,0.1); border:3px solid #0f0; padding:20px; margin:20px auto; border-radius:15px; max-width:90%; }
-    .shop-item { background:rgba(0,0,0,0.6); margin:15px 0; padding:15px; border-radius:10px; cursor:pointer; transition:0.3s; }
-    .shop-item:hover { background:#0f0; color:#000; transform:scale(1.05); }
+    *{margin:0;padding:0;box-sizing:border-box;touch-action:manipulation}
+    body{background:#000;color:#0f0;font-family:'Orbitron',sans-serif;text-align:center;overflow:hidden}
+    .tentacle{font-size:5em;animation:pulse 1.5s infinite;text-shadow:0 0 30px #0f0}
+    @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.4)}}
+    h1{font-size:2em;margin:15px;letter-spacing:4px;text-shadow:0 0 20px #0f0}
+    .lore{margin:20px;opacity:0.9;line-height:1.6}
+    .btn{background:linear-gradient(45deg,#0f0,#00f);color:#000;border:3px solid #0f0;padding:16px 32px;
+         font-size:1.3em;margin:12px auto;border-radius:15px;cursor:pointer;width:88%;max-width:380px;
+         font-weight:900;box-shadow:0 0 30px #0f0;transition:0.3s}
+    .btn:hover{transform:scale(1.06);box-shadow:0 0 50px #0f0}
+    #status{margin:15px;font-size:1.2em;color:#0f0}
+    .hidden{display:none}
+    canvas{background:#000;display:block;margin:20px auto;border:4px dashed #0f0;box-shadow:0 0 40px #0f0}
+    .stats{margin:15px;font-size:1.3em}
+    .shop{background:rgba(0,255,0,0.1);border:3px solid #0f0;padding:20px;margin:20px auto;border-radius:15px;max-width:90%}
+    .shop-item{background:rgba(0,0,0,0.6);margin:15px 0;padding:15px;border-radius:10px;cursor:pointer;transition:0.3s}
+    .shop-item:hover{background:#0f0;color:#000;transform:scale(1.05)}
   </style>
 </head>
 <body>
@@ -37,7 +37,7 @@
   </div>
 
   <div id="entrySection" class="hidden">
-    <button class="btn" id="freeEntryBtn">ENTRADA GRATUITA (1 vez)</button>
+    <button class="btn" id="freeEntryBtn">ENTRADA GRATUITA</button>
     <button class="btn" id="payEntryBtn">PAGAR 0.1 $STARG</button>
   </div>
 
@@ -64,90 +64,78 @@
   </div>
 
   <script>
+    // === TU DEV WALLET (ACCESO VIP ILIMITADO) ===
+    const DEV_WALLETS = [
+      "Ccp1SJut7ycZbAFNtYjmmGcGUgx7Gipji4R5BvfqfaQS",  // Solana
+      "0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5".toLowerCase()  // World Chain
+      // Añade más wallets VIP aquí si quieres
+    ];
+
     let wallet = null, network = null;
     let fragments = 0, level = 1, streak = 0, lives = 3, gameRunning = false;
     let player = { x: 0, speed: 7, skin: 0, magnet: false };
-    let objects = [];
+    let objects = [], boss = null, shots = [];
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    // ================= PHANTOM (100% FUNCIONAL MÓVIL PERÚ) =================
-    document.getElementById("phantomBtn").addEventListener("click", () => {
-      if (window.solana && window.solana.isPhantom) {
-        connectPhantom();
-        return;
-      }
-
-      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-      if (!isMobile) {
-        alert("Abre este enlace en tu móvil con Phantom instalado");
-        return;
-      }
-
-      // Deep link que SÍ abre el botón "Connect" en Phantom
-      const appUrl = encodeURIComponent(location.href.split("?")[0]);
-      location.href = `https://phantom.app/ul/browse?appUrl=${appUrl}&cluster=mainnet-beta`;
-      
-      document.getElementById("status").innerText = "Abriendo Phantom... pulsa CONECTAR";
-    });
+    // === CONEXIÓN PHANTOM (100% móvil Perú) ===
+    document.getElementById("phantomBtn").onclick = () => {
+      if (window.solana?.isPhantom) { connectPhantom(); return; }
+      const url = encodeURIComponent(location.href.split("?")[0]);
+      location.href = `https://phantom.app/ul/browse?appUrl=${url}&cluster=mainnet-beta`;
+    };
 
     async function connectPhantom() {
       try {
         const resp = await window.solana.connect();
         wallet = resp.publicKey.toString();
         network = "Solana";
-        document.getElementById("status").innerText = `Conectado: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
-        document.getElementById("connectSection").classList.add("hidden");
-        document.getElementById("entrySection").classList.remove("hidden");
-      } catch (err) {
-        console.log(err);
-        alert("Conexión cancelada o error");
-      }
+        afterConnect();
+      } catch { alert("Conexión cancelada"); }
     }
 
-    // Si ya está inyectado al cargar
-    window.addEventListener("load", () => {
-      if (window.solana && window.solana.isPhantom) {
-        setTimeout(connectPhantom, 1000);
-      }
-    });
-
-    // ================= METAMASK =================
+    // === METAMASK ===
     document.getElementById("metamaskBtn").onclick = async () => {
       if (!window.ethereum) return alert("Instala MetaMask");
       try {
-        const accounts = await ethereum.request({ method: "eth_requestAccounts" });
-        wallet = accounts[0];
+        const acc = await ethereum.request({ method: 'eth_requestAccounts' });
+        wallet = acc[0].toLowerCase();
         network = "World Chain";
-        document.getElementById("status").innerText = `Conectado: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
-        document.getElementById("connectSection").classList.add("hidden");
-        document.getElementById("entrySection").classList.remove("hidden");
+        afterConnect();
       } catch { alert("Cancelado"); }
     };
 
-    // ================= ENTRADA GRATUITA (AHORA SÍ FUNCIONA) =================
+    function afterConnect() {
+      document.getElementById("status").innerText = `Conectado: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
+      document.getElementById("connectSection").classList.add("hidden");
+      document.getElementById("entrySection").classList.remove("hidden");
+    }
+
+    // === ENTRADA GRATUITA (VIP ILIMITADO CON TU WALLET) ===
     document.getElementById("freeEntryBtn").onclick = () => {
-      const used = localStorage.getItem("xyrath9_free");
-      if (used && wallet !== "Ccp1SJut7ycZbAFNtYjmmGcGUgx7Gipji4R5BvfqfaQS") {
-        alert("Ya usaste tu entrada gratuita");
+      const isVIP = DEV_WALLETS.includes(wallet) || DEV_WALLETS.includes(wallet.toLowerCase());
+      if (!isVIP && localStorage.getItem("xyrath9_free")) {
+        alert("Ya usaste tu entrada gratuita. Paga 0.1 $STARG.");
         return;
       }
-      localStorage.setItem("xyrath9_free", "true");
+      if (!isVIP) localStorage.setItem("xyrath9_free", "true");
       startGame();
     };
 
-    // ================= JUEGO =================
+    // === JUEGO ===
     function startGame() {
       document.getElementById("entrySection").classList.add("hidden");
       document.getElementById("gameSection").classList.remove("hidden");
       resizeCanvas();
       player.x = canvas.width / 2;
       fragments = level = streak = 0; lives = 3; gameRunning = true;
-      objects = [];
+      objects = []; boss = null; shots = [];
 
-      setInterval(() => { streak++; document.getElementById("streak").innerText = streak; }, 1000);
+      setInterval(() => { if(gameRunning) { streak++; document.getElementById("streak").innerText = streak; }}, 1000);
       setInterval(levelUp, 30000);
       setInterval(spawnObject, 1000);
+      setInterval(() => { if(gameRunning && !boss) shots.push({x: player.x, y: canvas.height-130}); }, 500);
+      setInterval(spawnBoss, 600000); // cada 10 minutos
       requestAnimationFrame(gameLoop);
     }
 
@@ -160,76 +148,82 @@
     canvas.addEventListener("touchmove", e => { e.preventDefault(); player.x = e.touches[0].clientX; });
     canvas.addEventListener("mousemove", e => { player.x = e.clientX; });
 
-    function levelUp() {
-      if (gameRunning) {
-        level++;
-        document.getElementById("level").innerText = level;
-      }
-    }
+    function levelUp() { if(gameRunning) level++; document.getElementById("level").innerText = level; }
 
     function spawnObject() {
-      if (!gameRunning) return;
+      if (!gameRunning || boss) return;
       const type = Math.random() < 0.7 ? "fragment" : "tentacle";
-      objects.push({
-        x: Math.random() * (canvas.width - 100) + 50,
-        y: -100,
-        type,
-        speed: 3 + level + Math.random() * 2
-      });
+      objects.push({ x: Math.random()*(canvas.width-100)+50, y: -100, type, speed: 3+level+Math.random()*2 });
+    }
+
+    function spawnBoss() {
+      if (!gameRunning) return;
+      boss = { x: canvas.width/2, y: -200, life: 50 };
+      alert("¡BOSS TENTÁCULO CÓSMICO APARECE!");
     }
 
     function gameLoop() {
       if (!gameRunning) return;
       ctx.clearRect(0,0,canvas.width,canvas.height);
 
-      // NAVE ÉPICA
-      ctx.save();
-      ctx.translate(player.x, canvas.height - 100);
-      ctx.fillStyle = player.skin === 1 ? "#ff00ff" : player.skin === 2 ? "#00ffff" : "#0f0";
-      ctx.strokeStyle = "#0f0"; ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(0, -40); ctx.lineTo(-28, 35); ctx.lineTo(-12, 25);
-      ctx.lineTo(12, 25); ctx.lineTo(28, 35); ctx.closePath();
-      ctx.fill(); ctx.stroke();
-      ctx.restore();
+      // Nave
+      ctx.fillStyle = player.skin===1?"#ff00ff":player.skin===2?"#00ffff":"#0f0";
+      ctx.fillRect(player.x-25, canvas.height-130, 50, 60);
 
-      // OBJETOS
-      for (let i = objects.length - 1; i >= 0; i--) {
-        const o = objects[i];
-        o.y += o.speed;
-
-        if (o.type === "fragment") {
-          ctx.fillStyle = "#ff0";
-          ctx.font = "50px Orbitron";
-          ctx.fillText("F", o.x - 20, o.y + 20);
-        } else {
-          ctx.fillStyle = "#f00";
-          ctx.fillRect(o.x - 35, o.y, 70, 160);
-        }
-
-        const dist = Math.hypot(player.x - o.x, (canvas.height - 100) - o.y);
-        if (dist < 80) {
-          if (o.type === "fragment") {
-            fragments += player.magnet ? 5 : 1;
-            document.getElementById("fragments").innerText = fragments;
-          } else {
-            lives--;
-            document.getElementById("lives").innerText = lives;
-            if (lives <= 0) { gameOver(); return; }
-          }
-          objects.splice(i, 1);
-        }
-        if (o.y > canvas.height + 100) objects.splice(i, 1);
+      // Disparos
+      ctx.fillStyle = "#0ff";
+      for(let i=shots.length-1;i>=0;i--){
+        shots[i].y -= 10;
+        ctx.fillRect(shots[i].x-4, shots[i].y, 8, 20);
+        if(shots[i].y < -20) shots.splice(i,1);
       }
+
+      // Objetos normales
+      for(let i=objects.length-1;i>=0;i--){
+        let o = objects[i]; o.y += o.speed;
+        if(o.type==="fragment"){ ctx.fillStyle="#ff0"; ctx.fillText("F", o.x-20, o.y+20); }
+        else { ctx.fillStyle="#f00"; ctx.fillRect(o.x-30, o.y, 60, 140); }
+
+        if(Math.hypot(player.x-o.x, (canvas.height-100)-o.y)<70){
+          if(o.type==="fragment") fragments += player.magnet?5:1;
+          else { lives--; document.getElementById("lives").innerText=lives; if(lives<=0) gameOver(); }
+          objects.splice(i,1);
+        }
+        if(o.y > canvas.height+100) objects.splice(i,1);
+      }
+
+      // BOSS
+      if(boss){
+        boss.y += 1.2;
+        ctx.fillStyle = "#800080";
+        ctx.fillRect(boss.x-100, boss.y, 200, 250);
+        ctx.fillStyle = "#0f0";
+        ctx.fillRect(boss.x-100, boss.y-30, (200*boss.life/50), 15);
+
+        for(let i=shots.length-1;i>=0;i--){
+          if(shots[i].y < boss.y+250 && shots[i].y > boss.y && Math.abs(shots[i].x-boss.x)<100){
+            boss.life--; shots.splice(i,1);
+            if(boss.life<=0){
+              fragments += 100;
+              alert("¡BOSS DERROTADO! +100 Fragmentos");
+              boss = null;
+            }
+          }
+        }
+      }
+
+      document.getElementById("fragments").innerText = fragments;
       requestAnimationFrame(gameLoop);
     }
 
     function gameOver() {
       gameRunning = false;
-      alert(`¡GAME OVER!\nFragmentos: ${fragments} | Nivel ${level}`);
+      alert(`GAME OVER\nFragmentos finales: ${fragments}`);
+      document.getElementById("gameSection").classList.add("hidden");
+      document.getElementById("entrySection").classList.remove("hidden");
     }
 
-    // ================= TIENDA =================
+    // === TIENDA, COBRO, REINICIO ===
     document.getElementById("shopBtn").onclick = () => {
       document.getElementById("gameSection").classList.add("hidden");
       document.getElementById("shopSection").classList.remove("hidden");
@@ -238,34 +232,32 @@
       document.getElementById("shopSection").classList.add("hidden");
       document.getElementById("gameSection").classList.remove("hidden");
     };
-    document.querySelectorAll(".shop-item").forEach(item => {
-      item.onclick = () => {
-        const cost = +item.dataset.cost;
-        if (fragments >= cost) {
-          fragments -= cost;
-          document.getElementById("fragments").innerText = fragments;
-          const t = item.dataset.type;
-          if (t==="speed") player.speed += 4;
-          if (t==="magnet") player.magnet = true;
-          if (t==="skin1") player.skin = 1;
-          if (t==="skin2") player.skin = 2;
-          alert("¡Compra exitosa!");
-        } else alert("No tienes suficientes fragmentos");
-      };
+    document.querySelectorAll(".shop-item").forEach(i=>i.onclick=()=>{
+      const cost=+i.dataset.cost;
+      if(fragments>=cost){
+        fragments-=cost;
+        document.getElementById("fragments").innerText=fragments;
+        const t=i.dataset.type;
+        if(t==="speed") player.speed+=4;
+        if(t==="magnet") player.magnet=true;
+        if(t==="skin1") player.skin=1;
+        if(t==="skin2") player.skin=2;
+        alert("Compra exitosa");
+      }else alert("Fragmentos insuficientes");
     });
 
-    // ================= COBRAR =================
     document.getElementById("cashoutBtn").onclick = () => {
-      if (fragments < 100) return alert("Mínimo 100 fragmentos");
-      const starg = Math.floor(fragments / 100);
-      const msg = encodeURIComponent(
-        `RETIRO $STARG XYRATH-9\nCantidad: ${starg} $STARG\nFragmentos: ${fragments}\nWallet: ${wallet}\nRed: ${network}\n¡HODL ETERNO!`
-      );
-      open(`https://t.me/GoditsDimensional?text=${msg}`, '_blank');
+      if(fragments<100) return alert("Mínimo 100 fragmentos");
+      const starg = Math.floor(fragments/100);
+      const msg = encodeURIComponent(`RETIRO $STARG XYRATH-9\nCantidad: ${starg} $STARG\nWallet: ${wallet}\nRed: ${network}`);
+      open(`https://t.me/GoditsDimensional?text=${msg}`,'_blank');
       alert(`Solicitado ${starg} $STARG`);
     };
 
     document.getElementById("resetBtn").onclick = () => location.reload();
+
+    // Auto-conectar si ya está Phantom
+    if(window.solana?.isPhantom) setTimeout(connectPhantom,800);
   </script>
 </body>
 </html>
