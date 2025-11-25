@@ -2,37 +2,80 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>STAR GLITCH: XYRATH-9</title>
   <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/web3@1.10.4/dist/web3.min.js"></script>
   <script src="https://unpkg.com/@solana/spl-token@0.4.8/lib/index.iife.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
-    * { margin:0; padding:0; box-sizing:border-box; touch-action: manipulation; }
-    body { background:#000; color:#0f0; font-family:'Orbitron',monospace; text-align:center; overflow:hidden; }
-    .tentacle { font-size:5em; animation:pulse 1.5s infinite; }
-    @keyframes pulse { 0%,100% {transform:scale(1)} 50% {transform:scale(1.4)} }
-    h1 { font-size:1.8em; margin:10px; letter-spacing:3px; text-shadow:0 0 15px #0f0; }
-    .lore { margin:15px; opacity:0.9; line-height:1.5; }
-    .btn { background:linear-gradient(45deg,#0f0,#00f); color:#000; border:3px solid #0f0; padding:16px 32px; 
-           font-size:1.3em; margin:12px auto; border-radius:15px; cursor:pointer; width:90%; max-width:360px;
-           font-weight:bold; box-shadow:0 0 30px #0f0; transition:0.3s; }
-    .btn:hover { transform:scale(1.05); box-shadow:0 0 40px #0f0; }
-    #status { margin:15px; font-size:1.1em; color:#0f0; }
-    .hidden { display:none !important; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      background: #000; 
+      color: #0f0; 
+      font-family: 'Orbitron', monospace; 
+      text-align: center; 
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    .tentacle-core { font-size: 5em; animation: pulse 1.5s infinite; text-shadow: 0 0 25px #0f0; margin: 15px 0; }
+    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.35); } }
+    h1 { font-size: 1.6em; margin: 10px; letter-spacing: 3px; text-shadow: 0 0 15px #0f0; }
+    .lore { font-size: 0.9em; margin: 14px; opacity: 0.85; line-height: 1.5; }
+    .btn { 
+      background: linear-gradient(45deg, #0f0, #00f); 
+      color: #000; 
+      border: 3px solid #0f0; 
+      padding: 14px 32px; 
+      font-size: 1.2em; 
+      margin: 10px auto; 
+      border-radius: 14px; 
+      cursor: pointer; 
+      width: 90%; 
+      max-width: 340px;
+      font-weight: bold;
+      box-shadow: 0 0 25px #0f0;
+      transition: all 0.3s ease;
+      display: block;
+    }
+    .btn:hover { transform: scale(1.05); box-shadow: 0 0 35px #0f0; }
+    .btn:active { transform: scale(0.94); }
+    .hodl-area { 
+      width: 100%; height: 45vh; background: rgba(0,255,0,0.06); 
+      border: 3px dashed #0f0; border-radius: 18px; 
+      display: flex; align-items: center; justify-content: center; 
+      font-size: 1.9em; margin: 18px 0; position: relative; overflow: hidden;
+    }
+    .hodl-area::after { 
+      content: '🦑🦑🦑🦑🦑'; 
+      position: absolute; bottom: 10px; font-size: 1.4em; opacity: 0.3; 
+      animation: swim 9s linear infinite;
+    }
+    @keyframes swim { from { transform: translateX(-100%); } to { transform: translateX(120%); } }
+    .stats { margin: 16px 0; font-size: 1.1em; line-height: 1.7; }
+    .jackpot { color: #ff0; font-weight: bold; text-shadow: 0 0 12px #ff0; }
+    .hidden { display: none !important; }
+    #status { margin: 12px; font-size: 1em; min-height: 24px; color: #0f0; }
 
-    /* JUEGO NAVE VS TENTÁCULOS */
-    #gameCanvas { background:#000; width:100vw; height:60vh; border:3px dashed #0f0; margin:20px 0; }
-    .stats { margin:15px 0; font-size:1.2em; }
-    .jackpot { color:#ff0; font-weight:bold; }
+    .enemy { 
+      position: absolute; 
+      font-size: 2.3em; 
+      color: #f00; 
+      text-shadow: 0 0 15px #f00; 
+      animation: fall 4s linear; 
+      pointer-events: none;
+    }
+    @keyframes fall { from { top: -80px; } to { top: 100vh; } }
   </style>
 </head>
 <body>
-  <div class="tentacle">SQUID</div>
+  <div class="tentacle-core">🦑</div>
   <h1>STAR GLITCH: XYRATH-9</h1>
-  <p class="lore">Pilota tu nave entre los tentáculos cósmicos.<br>¡Sobrevive = HODL!</p>
-  <p id="status">Conectando wallet...</p>
+  <p class="lore">
+    En las profundidades de <strong>Xyrath-9</strong>, <em>Kieran Star</em> halló la moneda rota.<br>
+    Los <strong>Tentáculos Caóticos</strong> acechan. ¡HODL o perece!
+  </p>
+  <p id="status">Conecta tu wallet</p>
 
   <div id="connectSection">
     <button class="btn" id="phantomBtn">PHANTOM • SOLANA</button>
@@ -40,200 +83,244 @@
   </div>
 
   <div id="entrySection" class="hidden">
-    <button class="btn" id="freeEntryBtn">ENTRADA GRATUITA (VIP)</button>
+    <button class="btn" id="freeEntryBtn">ENTRADA GRATUITA</button>
     <button class="btn" id="payEntryBtn">PAGAR 0.1 $STARG</button>
   </div>
 
   <div id="gameSection" class="hidden">
     <div class="stats">
-      Fragmentos: <span id="fragments">0</span> | 
-      Streak: <span id="streak">0</span>s | 
+      Fragmentos: <span id="fragments">0</span><br>
+      Streak: <span id="streak">0</span>s<br>
       Jackpot: <span class="jackpot">100 $STARG</span>
     </div>
-    <canvas id="gameCanvas"></canvas>
-    <button class="btn" id="cashoutBtn">COBRAR → @GoditsDimensional</button>
+    <div class="hodl-area" id="hodlArea"><div id="hodlText">¡HODLEA!</div></div>
+    <button class="btn" id="cashoutBtn">COBRAR $STARG → @GoditsDimensional</button>
     <button class="btn" id="resetBtn">REINICIAR</button>
   </div>
 
   <script>
     const DEV_WALLET_SOLANA = 'Ccp1SJut7ycZbAFNtYjmmGcGUgx7Gipji4R5BvfqfaQS';
     const DEV_WALLET_WORLD = '0xd7fa97a54fe292df8463e89b8dbf9e6d2ec14bc5';
-    const VIP_WALLETS = [DEV_WALLET_SOLANA, DEV_WALLET_WORLD.toLowerCase()];
-    let wallet = null, network = null, provider = null;
-    let fragments = 0, streak = 0, gameRunning = false;
-    const HAS_PLAYED_KEY = 'xyrath9_played';
+    const SOLANA_CA = '3nhJUCbLwoT7w1iUWE1MUER1YbUmqJxeqBVpsBZFpump';
+    const WORLD_CA = '0xa3Ad51ebd02690317b34f83329F2f9b4f84683';
+    const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
+    const SOLANA_DECIMALS = 6;
+    const WORLD_DECIMALS = 18;
 
-    // ================= PHANTOM MÓVIL DEFINITIVO =================
-    document.getElementById("phantomBtn").addEventListener("click", async () => {
+    const VIP_WALLETS = [DEV_WALLET_SOLANA, DEV_WALLET_WORLD.toLowerCase()];
+    let provider, wallet, network, fragments = 0, streak = 0, interval, isHodling = false, enemyInterval;
+    const HAS_PLAYED_KEY = 'hasPlayedBefore';
+
+    // === PHANTOM ===
+    document.getElementById("phantomBtn").addEventListener("click", () => {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
       if (window.solana?.isPhantom) {
-        await connectPhantom();
+        connectPhantom();
         return;
       }
 
-      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-      if (!isMobile) return alert("Instala Phantom desde phantom.app");
+      if (!isMobile) return alert("Phantom no detectado. Instálalo desde phantom.app");
 
-      // Generar claves efímeras (requeridas por Phantom v2)
-      const { publicKey: dappKey } = await Solana.web3.Keypair.generate();
-      const session = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).slice(0,32);
+      // DEEP LINK PARA MÓVIL
+      const dappUrl = encodeURIComponent(window.location.href);
+      window.location.href = `https://phantom.app/ul/browse?dappUrl=${dappUrl}&cluster=mainnet-beta`;
 
-      localStorage.setItem('dappKey', JSON.stringify(Array.from(dappKey.toBytes())));
-      localStorage.setItem('session', session);
-
-      const params = new URLSearchParams({
-        dapp_encryption_public_key: Solana.web3.PublicKey.fromBase58(dappKey.toBase58()).toBase58(),
-        cluster: 'mainnet-beta',
-        app_url: encodeURIComponent(location.href),
-        redirect_link: encodeURIComponent(location.href),
-        session: session
-      });
-
-      const phantomDeepLink = `https://phantom.app/ul/v1/connect?${params.toString()}`;
-      location.href = phantomDeepLink;
-
-      document.getElementById("status").innerText = "Abriendo Phantom... Pulsa CONECTAR";
+      // POLLING AL REGRESO
+      startPhantomPolling();
     });
 
-    async function connectPhantom() {
-      try {
-        const resp = await window.solana.connect();
-        wallet = resp.publicKey.toString();
-        network = "Solana";
-        provider = window.solana;
-        document.getElementById("status").innerText = `Conectado: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
-        document.getElementById("connectSection").classList.add("hidden");
-        document.getElementById("entrySection").classList.remove("hidden");
-      } catch (e) {
-        alert("Conexión cancelada");
-      }
+    function connectPhantom() {
+      if (!window.solana?.isPhantom) return;
+      window.solana.connect({ onlyIfTrusted: false })
+        .then(resp => {
+          wallet = resp.publicKey.toString();
+          network = "Solana";
+          provider = window.solana;
+          showEntry();
+        })
+        .catch(() => alert("Conexión cancelada"));
     }
 
-    // Detectar regreso de Phantom
-    window.addEventListener("load", () => {
-      if (window.solana?.isPhantom && localStorage.getItem('session')) {
-        connectPhantom();
+    function startPhantomPolling() {
+      const poll = setInterval(() => {
+        if (window.solana?.isPhantom && !wallet) {
+          connectPhantom();
+        }
+      }, 600);
+
+      setTimeout(() => {
+        clearInterval(poll);
+        if (!wallet) {
+          document.getElementById("status").innerText = "No conectado. Pulsa PHANTOM de nuevo.";
+        }
+      }, 30000);
+    }
+
+    // === METAMASK ===
+    document.getElementById("metamaskBtn").addEventListener("click", async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          wallet = accounts[0].toLowerCase();
+          network = "World Chain";
+          provider = window.ethereum;
+          showEntry();
+        } catch (e) { alert("Conexión cancelada"); }
+      } else {
+        alert("MetaMask no detectado");
       }
     });
 
-    // ================= METAMASK =================
-    document.getElementById("metamaskBtn").addEventListener("click", async () => {
-      if (!window.ethereum) return alert("Instala MetaMask");
-      try {
-        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-        wallet = accounts[0].toLowerCase();
-        network = "World Chain";
-        provider = ethereum;
-        document.getElementById("status").innerText = `Conectado: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
-        document.getElementById("connectSection").classList.add("hidden");
-        document.getElementById("entrySection").classList.remove("hidden");
-      } catch (e) { alert("Cancelado"); }
-    });
+    // === JUEGO ===
+    function showEntry() {
+      document.getElementById("status").innerText = `HODLer: ${wallet.slice(0,6)}...${wallet.slice(-4)}`;
+      document.getElementById("connectSection").classList.add("hidden");
+      document.getElementById("entrySection").classList.remove("hidden");
+      loadState();
+    }
 
-    // ================= ENTRADA GRATIS / PAGA =================
     document.getElementById("freeEntryBtn").addEventListener("click", () => {
       const isVIP = VIP_WALLETS.includes(wallet);
       const hasPlayed = localStorage.getItem(HAS_PLAYED_KEY);
-      if (!isVIP && hasPlayed) return alert("Ya usaste tu entrada gratuita");
+      if (!isVIP && hasPlayed) {
+        alert("Ya usaste tu entrada gratuita. Paga 0.1 $STARG.");
+        return;
+      }
       if (!isVIP) localStorage.setItem(HAS_PLAYED_KEY, 'true');
       startGame();
     });
 
-    // ================= JUEGO NAVE VS TENTÁCULOS =================
-    let shipX, tentacles = [], scoreTimer;
+    document.getElementById("payEntryBtn").addEventListener("click", async () => {
+      document.getElementById("status").innerText = "Sacrificando...";
+      const amount = 0.1 * 10 ** (network === "Solana" ? SOLANA_DECIMALS : WORLD_DECIMALS);
+      try {
+        if (network === "Solana") {
+          const connection = new Solana.Connection(SOLANA_RPC, 'confirmed');
+          const tx = new Solana.Transaction().add(
+            SplToken.createTransferInstruction(
+              SplToken.TOKEN_PROGRAM_ID,
+              new Solana.PublicKey(wallet),
+              new Solana.PublicKey(DEV_WALLET_SOLANA),
+              new Solana.PublicKey(wallet),
+              [],
+              amount
+            )
+          );
+          await provider.signAndSendTransaction(tx);
+        } else {
+          const web3 = new Web3(provider);
+          const token = new web3.eth.Contract([{"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"}], WORLD_CA);
+          await token.methods.transfer(DEV_WALLET_WORLD, amount).send({ from: wallet });
+        }
+        startGame();
+      } catch (err) {
+        document.getElementById("status").innerText = "Ofrenda rechazada.";
+      }
+    });
 
     function startGame() {
       document.getElementById("entrySection").classList.add("hidden");
       document.getElementById("gameSection").classList.remove("hidden");
+      startHODL();
+      startEnemies();
+    }
 
-      const canvas = document.getElementById("gameCanvas");
-      const ctx = canvas.getContext("2d");
-      canvas.width = innerWidth;
-      canvas.height = innerHeight * 0.6;
+    function startHODL() {
+      const area = document.getElementById("hodlArea");
+      area.addEventListener("touchstart", e => { e.preventDefault(); isHodling = true; startStreak(); });
+      area.addEventListener("mousedown", () => { isHodling = true; startStreak(); });
+      area.addEventListener("touchend", () => { isHodling = false; endStreak(); });
+      area.addEventListener("mouseup", () => { isHodling = false; endStreak(); });
+    }
 
-      shipX = canvas.width / 2;
-
-      canvas.addEventListener("touchmove", e => {
-        e.preventDefault();
-        shipX = e.touches[0].clientX;
-      });
-
-      canvas.addEventListener("mousemove", e => {
-        shipX = e.clientX;
-      });
-
-      fragments = 0;
+    function startStreak() {
+      if (interval) return;
       streak = 0;
-      tentacles = [];
-      gameRunning = true;
-
-      scoreTimer = setInterval(() => {
+      document.getElementById("hodlText").innerText = "¡HODLEANDO!";
+      interval = setInterval(() => {
         streak++;
-        fragments += streak > 30 ? 2 : 1;
+        fragments += streak * (streak > 30 ? 2 : 1);
         document.getElementById("streak").innerText = streak;
         document.getElementById("fragments").innerText = fragments;
+        saveState();
+        if (streak % 10 === 0) spawnFriendlyTentacle();
       }, 1000);
-
-      spawnTentacle();
-      requestAnimationFrame(gameLoop);
     }
 
-    function spawnTentacle() {
-      if (!gameRunning) return;
-      tentacles.push({
-        x: Math.random() * innerWidth,
-        y: -100,
-        speed: 2 + Math.random() * 3
-      });
-      setTimeout(spawnTentacle, 800 + Math.random() * 1200);
+    function endStreak() {
+      clearInterval(interval); interval = null;
+      document.getElementById("hodlText").innerText = "¡HODLEA!";
+      if (streak > 5) alert(`¡${streak}s! Ganaste ${(streak/10).toFixed(1)} $STARG`);
+      saveState();
     }
 
-    function gameLoop() {
-      if (!gameRunning) return;
-      const canvas = document.getElementById("gameCanvas");
-      const ctx = canvas.getContext("2d");
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-
-      // Nave
-      ctx.fillStyle = "#0f0";
-      ctx.fillRect(shipX-20, canvas.height-60, 40, 40);
-
-      // Tentáculos
-      ctx.fillStyle = "#f00";
-      for (let i = tentacles.length-1; i >= 0; i--) {
-        let t = tentacles[i];
-        t.y += t.speed;
-        ctx.fillRect(t.x-15, t.y, 30, 100);
-
-        // Colisión
-        if (t.y > canvas.height-100 && Math.abs(t.x - shipX) < 40) {
-          alert(`¡Tentáculo te atrapó! Streak: ${streak}s`);
-          endGame();
-          return;
+    function startEnemies() {
+      enemyInterval = setInterval(() => {
+        if (!isHodling && fragments > 0) {
+          fragments = Math.floor(fragments * 0.9);
+          document.getElementById("fragments").innerText = fragments;
+          saveState();
+          alert("¡Tentáculo Caótico te robó 10%!");
         }
-        if (t.y > canvas.height+100) tentacles.splice(i,1);
-      }
-
-      requestAnimationFrame(gameLoop);
+        spawnEnemy();
+      }, 8000 + Math.random() * 7000);
     }
 
-    function endGame() {
-      gameRunning = false;
-      clearInterval(scoreTimer);
-      clearTimeout(spawnTentacle);
+    function spawnEnemy() {
+      const e = document.createElement("div");
+      e.className = "enemy";
+      e.innerText = "🦑";
+      e.style.left = Math.random() * 80 + "%";
+      document.body.appendChild(e);
+      setTimeout(() => e.remove(), 4000);
     }
 
-    document.getElementById("resetBtn").onclick = () => location.reload();
+    function spawnFriendlyTentacle() {
+      const t = document.createElement("div");
+      t.innerText = "🦑";
+      t.style.position = "absolute"; t.style.fontSize = "3em"; t.style.color = "#0f0";
+      t.style.left = Math.random() * 80 + "%"; t.style.top = "-60px";
+      t.style.animation = "fall 3s linear"; t.style.textShadow = "0 0 15px #0f0";
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
 
-    document.getElementById("cashoutBtn").onclick = () => {
+    document.getElementById("cashoutBtn").addEventListener("click", () => {
       if (fragments < 100) return alert("Mínimo 100 fragmentos");
       const amount = (fragments / 1000).toFixed(3);
-      const msg = encodeURIComponent(
-        `SQUID RETIRO $STARG\n\nCantidad: ${amount} $STARG\nRed: ${network}\nWallet: ${wallet}\n\n¡HODL ETERNO!`
-      );
-      open(`https://t.me/GoditsDimensional?text=${msg}`, '_blank');
-      alert("Solicitud enviada!");
-      location.reload();
-    };
+      const message = encodeURIComponent(`🦑 RETIRO $STARG 🦑\n\nCantidad: ${amount} $STARG\nRed: ${network}\nWallet: ${wallet}\n\n¡HODL ETERNO!`);
+      window.open(`https://t.me/GoditsDimensional?text=${message}`, '_blank');
+      alert("Solicitud enviada a @GoditsDimensional");
+      resetGame();
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", resetGame);
+
+    function resetGame() {
+      clearInterval(interval); interval = null;
+      clearInterval(enemyInterval);
+      fragments = 0; streak = 0;
+      document.getElementById("fragments").innerText = 0;
+      document.getElementById("streak").innerText = 0;
+      document.getElementById("gameSection").classList.add("hidden");
+      document.getElementById("entrySection").classList.remove("hidden");
+      document.getElementById("status").innerText = "Dimensión reiniciada.";
+    }
+
+    function saveState() { localStorage.setItem('f', fragments); localStorage.setItem('s', streak); }
+    function loadState() { 
+      fragments = +localStorage.getItem('f') || 0; 
+      streak = +localStorage.getItem('s') || 0;
+      document.getElementById("fragments").innerText = fragments;
+      document.getElementById("streak").innerText = streak;
+    }
+
+    const style = document.createElement('style');
+    style.innerHTML = `@keyframes fall { from { top: -60px; opacity: 1; } to { top: 100vh; opacity: 0; } }`;
+    document.head.appendChild(style);
+
+    loadState();
   </script>
 </body>
 </html>
